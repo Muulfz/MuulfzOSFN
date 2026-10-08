@@ -1,0 +1,41 @@
+title: Ultimate Performance power plan + HAGS + VRR
+actions:
+  - !status
+    status: Activating Ultimate Performance power plan...
+  - !powerShell
+    # Laptops keep Balanced (winutil: "NOT FOR LAPTOPS"; Atlas warns on battery).
+    command: 'if (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) { exit 0 }
+
+      $out = powercfg /duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>&1
+
+      $guid = ([regex]''[a-f0-9-]{36}'').Match($out).Value
+
+      if ($guid) { powercfg /setactive $guid }
+
+      '
+    # x3d-balanced (Fortnite playbook): dual-CCD Ryzen X3D needs Balanced for
+    # AMD's core parking to keep the game on the V-Cache CCD.
+    option: '!x3d-balanced'
+    _tags:
+      - mode:any
+      - tier:safe
+  - !status
+    status: Enabling Hardware-Accelerated GPU Scheduling (HAGS) + VRR...
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers
+    value: HwSchMode
+    type: REG_DWORD
+    data: '2'
+    _tags:
+      - mode:any
+      - tier:safe
+  # Windows reads this per user, not under GraphicsDrivers (Settings > Graphics).
+  # One string for every toggle: writing only VRR wiped "Optimizations for windowed games".
+  - !registryValue
+    path: HKCU\Software\Microsoft\DirectX\UserGpuPreferences
+    value: DirectXUserGlobalSettings
+    type: REG_SZ
+    data: SwapEffectUpgradeEnable=1;VRROptimizeEnable=1;
+    _tags:
+      - mode:any
+      - tier:safe

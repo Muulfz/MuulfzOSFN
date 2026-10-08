@@ -1,0 +1,102 @@
+title: Background quiet -- no surprise reboots, reinstalls, nags or telemetry wake-ups (v5)
+# Survey of Atlas new-update, ReviOS, Win11Debloat, winutil, Sophia, PC-Tuning,
+# nohuto, FR33THY (2026-10-08). Only items 2+ of them ship and that keep every
+# anti-cheat / tournament prerequisite (Defender, WU, Store, Game Bar untouched).
+actions:
+  - !status
+    status: 'Quieting background activity (update reboots, app reinstalls, nags, telemetry)...'
+
+  # No WU restart inside 10:00-04:00 (18 h, the max). Updates still install.
+  # NoAutoRebootWithLoggedOnUsers needs AUOptions=4 and misbehaves (MS waas-restart).
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate', value: SetActiveHours, type: REG_DWORD, data: '1', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate', value: ActiveHoursStart, type: REG_DWORD, data: '10', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate', value: ActiveHoursEnd, type: REG_DWORD, data: '4', _tags: [mode:any, tier:safe]}
+
+  # New Outlook / Dev Home / Teams come back through WU orchestrator jobs
+  # (Atlas disable-auto-updates.yml, ReviOS updates.yml, MS "block new Outlook preinstall").
+  - !registryKey {path: 'HKLM\SOFTWARE\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\OutlookUpdate', _tags: [mode:any, tier:safe]}
+  - !registryKey {path: 'HKLM\SOFTWARE\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\DevHomeUpdate', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Orchestrator\UScheduler\OutlookUpdate', value: workCompleted, type: REG_DWORD, data: '1', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Orchestrator\UScheduler\DevHomeUpdate', value: workCompleted, type: REG_DWORD, data: '1', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe', value: BlockedOobeUpdaters, type: REG_SZ, data: '["MS_Outlook"]', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Communications', value: ConfigureChatAutoInstall, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+
+  # Widgets: the WebExperience package goes in appx/trim.yml. No Dsh AllowNewsAndInterests
+  # policy: on 26H2 UCPD refuses that one value even to an elevated admin (other values
+  # on the key write fine), and Atlas only gets it by disabling UCPD (VM v5 run).
+  - !appx {name: '*Microsoft.StartExperiencesApp*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+
+  # Full-screen "Let's finish setting up" after updates, and suggestion toasts
+  # that steal focus (ReviOS notifications.yml, Atlas config-content-delivery.yml).
+  - !registryValue {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement', value: ScoobeSystemSettingEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-310093Enabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-338389Enabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-338393Enabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-353694Enabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-353696Enabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SoftLandingEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: RotatingLockScreenOverlayEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent', value: DisableConsumerAccountStateContent, type: REG_DWORD, data: '1', _tags: [mode:any, tier:safe]}
+
+  # Telemetry policy (Pro treats 0 as "Required"); DiagTrack is already disabled.
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: AllowTelemetry, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: AllowDeviceNameInTelemetry, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SYSTEM\CurrentControlSet\Control\WMI\Autologger\Diagtrack-Listener', value: Start, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+
+  # Firmware-injected OEM installers (WPBT: Armoury Crate etc.), and companion
+  # apps auto-installed for mice/monitors. Drivers still install.
+  - !registryValue {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager', value: DisableWpbtExecution, type: REG_DWORD, data: '1', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Device Metadata', value: PreventDeviceMetadataFromNetwork, type: REG_DWORD, data: '1', _tags: [mode:any, tier:safe]}
+
+  # Maintenance still runs (TRIM, Defender), it just doesn't wake the PC for it.
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Task Scheduler\Maintenance', value: WakeUp, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+
+  # Spawned whenever a game runs, not needed by Game Mode or Game Bar (PC-Tuning,
+  # FR33THY). Kept on x3d-balanced: unverified whether AMD's game detection uses it.
+  - !registryValue
+    path: HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter
+    value: ActivationType
+    type: REG_DWORD
+    data: '0'
+    option: '!x3d-balanced'
+    _tags: [mode:any, tier:safe]
+
+  # Telemetry tasks. Names differ between 24H2/25H2/26H2, so disable whichever
+  # exist (a missing !scheduledTask logs as Error on the ISO path).
+  - !powerShell
+    command: |
+      foreach ($t in '\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip',
+                     '\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector',
+                     '\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting',
+                     '\Microsoft\Windows\Autochk\Proxy',
+                     '\Microsoft\Windows\Application Experience\MareBackup',
+                     '\Microsoft\Windows\Application Experience\StartupAppTask',
+                     '\Microsoft\Windows\Application Experience\PcaPatchDbTask',
+                     '\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem',
+                     '\Microsoft\Windows\Windows Error Reporting\QueueReporting',
+                     '\Microsoft\Windows\Maps\MapsToastTask') {
+        $path = $t.Substring(0, $t.LastIndexOf('\') + 1)
+        Get-ScheduledTask -TaskPath $path -TaskName (Split-Path $t -Leaf) -ErrorAction SilentlyContinue |
+          Disable-ScheduledTask -ErrorAction SilentlyContinue | Out-Null
+      }
+      exit 0
+    _tags: [mode:any, tier:aggressive]
+
+  # Desktops only (no battery): hibernation file off, and no link power saving on
+  # USB 3 / hub suspend / PCIe ASPM / NVMe idle in the active plan. Wake-latency
+  # and stability, not FPS (Atlas DisablePowerSaving.ps1, WinSux; GUIDs: nohuto power).
+  - !powerShell
+    command: |
+      if (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) { exit 0 }
+      powercfg /hibernate off
+      foreach ($s in '2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009',
+                     '2a737441-1930-4402-8d77-b2bebba308a3 0853a681-27c8-4100-a2fd-82013e970683',
+                     '501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5',
+                     '0012ee47-9041-4b5d-9b77-535fba8b1442 d639518a-e56d-4345-8af2-b9f32fb26109',
+                     '0012ee47-9041-4b5d-9b77-535fba8b1442 d3d55efd-c1ff-424e-9dc3-441be7833010') {
+        $sub, $set = $s -split ' '
+        powercfg /setacvalueindex SCHEME_CURRENT $sub $set 0
+      }
+      powercfg /setactive SCHEME_CURRENT
+      exit 0
+    _tags: [mode:any, tier:safe]

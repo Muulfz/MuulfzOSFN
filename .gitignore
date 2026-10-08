@@ -1,0 +1,7 @@
+dist/
+*.apbx
+*.iso
+__pycache__/
+*.pyc
+.pytest_cache/
+benchmarks/

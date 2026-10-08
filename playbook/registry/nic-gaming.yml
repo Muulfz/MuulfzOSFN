@@ -1,0 +1,75 @@
+title: NIC + network stack for gaming -- power saving off, max receive buffers, Wi-Fi off while wired, no P2P uploads, Fortnite DSCP
+actions:
+  - !status
+    status: 'Disabling NIC power saving, tuning Wi-Fi and background network use...'
+
+  # Untouched on purpose (research 2026-10): interrupt moderation / ITR, flow control,
+  # offloads (incl. URO/USO), RSS, jumbo frames, NetworkThrottlingIndex, packet coalescing,
+  # Nagle. At Fortnite's ~30-600 UDP packets/s they are placebo or cost CPU/DPC time
+  # (the endgame CPU spike is the game's own simulation, not packet handling: <1% CPU in
+  # the VM UDP stress test). NetworkThrottlingIndex 0xFFFFFFFF can even lengthen DPCs (nohuto).
+
+  # NIC power saving -> off, only where the driver exposes the keyword and 0 is a valid
+  # value (names differ per vendor: Realtek, Intel, Killer, MediaTek/Intel Wi-Fi).
+  # Mostly a stability win (EEE link drops on I225/I226, wake latency).
+  # Persisted + re-run at every boot: on many PCs the real NIC driver arrives via
+  # Windows Update after OOBE, and a fresh driver install resets these to INF defaults.
+  - !powerShell
+    command: |
+      $dir = Join-Path $env:ProgramData 'MuulfzOTMZ'
+      New-Item -ItemType Directory -Force $dir | Out-Null
+      $file = Join-Path $dir 'nic-power.ps1'
+      $script = @'
+      $off = '*EEE', 'EEE', 'EEELinkAdvertisement', 'AdvancedEEE', 'EnableGreenEthernet', 'EeePhyEnable',
+             'GigaLite', 'PowerSavingMode', 'PowerSaveMode', 'ULPMode', 'ReduceSpeedOnPowerDown', 'DMACoalescing',
+             'EnablePowerManagement', 'EnableSavePowerNow', 'SavePowerNowEnabled', 'AutoPowerSaveModeEnabled',
+             'NicAutoPowerSaver', '*SelectiveSuspend', '*DeviceSleepOnDisconnect', 'LowPowerEnable', 'bLowPowerEnable'
+      foreach ($a in Get-NetAdapter -Physical -ErrorAction SilentlyContinue) {
+        foreach ($p in Get-NetAdapterAdvancedProperty -Name $a.Name -ErrorAction SilentlyContinue | Where-Object RegistryKeyword -in $off) {
+          if ('0' -in $p.ValidRegistryValues -and "$($p.RegistryValue)" -ne '0') {
+            Set-NetAdapterAdvancedProperty -Name $a.Name -RegistryKeyword $p.RegistryKeyword -RegistryValue 0 -NoRestart
+            Write-Host "$($a.Name): $($p.RegistryKeyword) -> 0"
+          }
+        }
+        # Receive descriptors to the driver max: no drops when an endgame burst lands on
+        # top of a download (MS NIC tuning guide; ~2 KB RAM per descriptor, Intel).
+        $rb = Get-NetAdapterAdvancedProperty -Name $a.Name -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue
+        if ($rb -and $rb.NumericParameterMaxValue -and [int]"$($rb.RegistryValue)" -lt $rb.NumericParameterMaxValue) {
+          Set-NetAdapterAdvancedProperty -Name $a.Name -RegistryKeyword '*ReceiveBuffers' -RegistryValue $rb.NumericParameterMaxValue -NoRestart
+          Write-Host "$($a.Name): *ReceiveBuffers -> $($rb.NumericParameterMaxValue)"
+        }
+        # "Allow the computer to turn off this device" (Device Manager power tab).
+        $id = [regex]::Escape($a.PnPDeviceID)
+        Get-CimInstance -Namespace root/WMI -ClassName MSPower_DeviceEnable -ErrorAction SilentlyContinue |
+          Where-Object { $_.InstanceName -match "^$id" -and $_.Enable } |
+          Set-CimInstance -Property @{ Enable = $false }
+      }
+      '@
+      Set-Content -LiteralPath $file -Value $script -Encoding UTF8
+      & $file
+      $act = New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$file`""
+      $trg = New-ScheduledTaskTrigger -AtStartup
+      $trg.Delay = 'PT1M'
+      Register-ScheduledTask -TaskPath '\MuulfzOTMZ\' -TaskName 'NIC power saving off' -Action $act -Trigger $trg -User SYSTEM -RunLevel Highest -Force | Out-Null
+      # Wi-Fi power saving in the active plan (AC) -> Maximum Performance.
+      powercfg /setacvalueindex SCHEME_CURRENT 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0
+      powercfg /setactive SCHEME_CURRENT
+      exit 0
+    _tags: [mode:any, tier:safe]
+
+  # Windows Connection Manager: 3 = prevent Wi-Fi while on Ethernet. Wi-Fi drops
+  # (no background scans / DPCs) when the cable is up and comes back if it's unplugged.
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy', value: fMinimizeConnections, type: REG_DWORD, data: '3', _tags: [mode:any, tier:safe]}
+
+  # Delivery Optimization: HTTP only, no peer-to-peer serving of updates (Atlas sets 0).
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization', value: DODownloadMode, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+
+  # Tag Fortnite's UDP game traffic DSCP 46 (EF). Does nothing until the router honours
+  # it (cake diffserv4 / UniFi QoS); harmless otherwise. Non-domain PCs need
+  # "Do not use NLA" for policy QoS to apply.
+  - !registryValue {path: 'HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS', value: Do not use NLA, type: REG_SZ, data: '1', _tags: [mode:any, tier:safe]}
+  - !powerShell
+    command: |
+      Remove-NetQosPolicy -Name MuulfzFortnite -Confirm:$false -ErrorAction SilentlyContinue
+      New-NetQosPolicy -Name MuulfzFortnite -AppPathNameMatchCondition 'FortniteClient-Win64-Shipping.exe' -IPProtocolMatchCondition UDP -DSCPAction 46 -NetworkProfile All | Out-Null
+    _tags: [mode:any, tier:safe]

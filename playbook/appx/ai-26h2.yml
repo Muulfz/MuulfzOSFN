@@ -1,0 +1,77 @@
+title: 26H2 AI surface -- Click to Do, Settings agent, Paint AI, generative-AI app access
+actions:
+  - !status
+    status: 'Disabling 26H2 AI features (Click to Do, Settings agent, generative AI access)...'
+
+  # WindowsAI CSP (learn.microsoft.com policy-csp-windowsai, 2026-09).
+  # Recall / Copilot policies already live in appx/trim.yml.
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI
+    value: DisableClickToDo
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+  # Documented for Enterprise/Education; harmless no-op if Pro ignores it.
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI
+    value: DisableSettingsAgent
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+
+  # Settings > Privacy > Generative AI: deny app access machine-wide.
+  - !registryValue
+    path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\generativeAI
+    value: Value
+    type: REG_SZ
+    data: Deny
+    _tags: [mode:any, tier:aggressive]
+
+  - !registryValue
+    path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint
+    value: DisableCocreator
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+  - !registryValue
+    path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint
+    value: DisableGenerativeFill
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+  - !registryValue
+    path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint
+    value: DisableImageCreator
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+
+  # Win11Debloat Disable_Notepad_AI_Features / Disable_Edge_AI_Features (v5).
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\WindowsNotepad', value: DisableAIFeatures, type: REG_DWORD, data: '1', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Edge', value: HubsSidebarEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Edge', value: CopilotPageContext, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Edge', value: CopilotCDPPageContext, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Edge', value: ComposeInlineEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Edge', value: NewTabPageBingChatEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+
+  # Manual, not gutted: starts on demand instead of at every boot. Not on every build.
+  - !powerShell
+    command: |
+      Get-Service WSAIFabricSvc -ErrorAction SilentlyContinue | Set-Service -StartupType Manual -ErrorAction SilentlyContinue
+      exit 0
+    _tags: [mode:any, tier:aggressive]
+  - !appx {name: '*Microsoft.Windows.AIHub*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+
+  # Removable user-facing packages only. System AI packages (CoreAI,
+  # AIFabric, WindowsWorkload.*) stay: removing them is unaudited and
+  # WSAIFabricSvc reportedly destabilises when gutted.
+  - !appx
+    name: '*Microsoft.WritingAssistant*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.Edge.GameAssist*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]

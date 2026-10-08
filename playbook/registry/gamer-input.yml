@@ -1,0 +1,28 @@
+title: Gamer input + QoL -- mouse acceleration off, no accessibility popups, no background capture
+actions:
+  - !status
+    status: 'Disabling mouse acceleration, Sticky/Filter Keys shortcuts and background game capture...'
+
+  # "Enhance pointer precision" off = 1:1 mouse movement (Atlas default). HKCU with
+  # AME's default AllUsers scope also lands in the Default profile, so the account
+  # AME creates at OOBE inherits it.
+  - !registryValue {path: 'HKCU\Control Panel\Mouse', value: MouseSpeed, type: REG_SZ, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\Control Panel\Mouse', value: MouseThreshold1, type: REG_SZ, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\Control Panel\Mouse', value: MouseThreshold2, type: REG_SZ, data: '0', _tags: [mode:any, tier:safe]}
+
+  # Shift x5 / held-Shift / NumLock-hold popups that steal focus mid-match.
+  # Flags with the hotkey bit cleared (Windows defaults are 510 / 126 / 62).
+  - !registryValue {path: 'HKCU\Control Panel\Accessibility\StickyKeys', value: Flags, type: REG_SZ, data: '506', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\Control Panel\Accessibility\Keyboard Response', value: Flags, type: REG_SZ, data: '122', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\Control Panel\Accessibility\ToggleKeys', value: Flags, type: REG_SZ, data: '58', _tags: [mode:any, tier:safe]}
+
+  # Background "record what happened" keeps the GPU encoder busy. Game Bar itself
+  # stays (AMD's dual-CCD X3D scheduling needs it); only capture is off.
+  - !registryValue {path: 'HKCU\System\GameConfigStore', value: GameDVR_Enabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR', value: AppCaptureEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\Software\Microsoft\GameBar', value: AutoGameModeEnabled, type: REG_DWORD, data: '1', _tags: [mode:any, tier:safe]}
+
+  # Fast Startup = hibernated kernel; a real cold boot re-inits drivers (Atlas default).
+  - !registryValue {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power', value: HiberbootEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:safe]}
+  # No PowerThrottlingOff (v5): it's a kernel-wide switch, so on hybrid Intel / laptops
+  # background work stops going to E-cores and competes with the game (nohuto power).

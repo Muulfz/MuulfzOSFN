@@ -1,0 +1,44 @@
+title: Performance options (wizard page 3) -- service grouping, memory compression, FTH
+actions:
+  - !status
+    status: 'Applying selected performance options...'
+
+  # Windows splits every svchost service into its own process on PCs with >3.5 GB RAM.
+  # SvcHostSplitDisable=1 puts a service back into its shared host -> far fewer
+  # processes (Atlas Disable-ServiceHostSplit.ps1). Trade-off: if one service in a
+  # shared host crashes, the host and its siblings go down; most restart via their
+  # recovery actions, so anything whose restart would hit a running match stays split:
+  #   Xbl*/Xbox*/Gaming*  Game Bar + Xbox fail in shared hosts (Atlas), X3D needs Game Bar
+  #   audio               Audiosrv, AudioEndpointBuilder: sound drop mid-match
+  #   network             Dhcp, Dnscache, NlaSvc, nsi, netprofm, Wcmsvc, WlanSvc, iphlpsvc
+  #   firewall            BFE, mpssvc: left as Windows ships them (already grouped, alone in
+  #                       their own LocalServiceNoNetworkFirewall host)
+  - !powerShell
+    command: |
+      $keep = '^(Xbl|Xbox|Gaming|Audiosrv$|AudioEndpointBuilder$|Dhcp$|Dnscache$|NlaSvc$|nsi$|netprofm$|Wcmsvc$|WlanSvc$|iphlpsvc$|BFE$|mpssvc$)'
+      foreach ($k in Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services') {
+        $p = Get-ItemProperty $k.PSPath -ErrorAction SilentlyContinue
+        if ($p.ImagePath -match 'svchost\.exe' -and $k.PSChildName -notmatch $keep) {
+          try { Set-ItemProperty $k.PSPath SvcHostSplitDisable 1 -Type DWord -ErrorAction Stop }
+          catch { Write-Warning "skipped protected service $($k.PSChildName)" }
+        }
+      }
+      exit 0
+    option: svchost-group
+    _tags: [mode:any, tier:aggressive]
+
+  # Memory compression keeps cold pages compressed in RAM instead of the pagefile.
+  # With RAM to spare it mostly idles (nohuto); off trades that for zero compression
+  # CPU work. Only on 16 GB+ so low-RAM PCs keep the safety net.
+  - !powerShell
+    command: |
+      if ((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory -ge 15GB) { Disable-MMAgent -MemoryCompression -ErrorAction SilentlyContinue }
+      exit 0
+    option: memcomp-off
+    _tags: [mode:any, tier:aggressive]
+
+  # Fault Tolerant Heap shims an app with heap mitigations after it crashes a few
+  # times, at a performance cost, and keeps them. Reset existing shims + turn it off
+  # (Atlas disable-fth.yml default, PC-Tuning).
+  - !run {exe: 'rundll32.exe', args: 'fthsvc.dll,FthSysprepSpecialize', option: fth-off, _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\FTH', value: Enabled, type: REG_DWORD, data: '0', option: fth-off, _tags: [mode:any, tier:aggressive]}

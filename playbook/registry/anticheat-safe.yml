@@ -1,0 +1,116 @@
+title: Anti-cheat compatibility -- ensure Defender + HVCI + DriverBlocklist on
+actions:
+  - !status
+    status: 'Ensuring kernel-anti-cheat prerequisites (Defender, HVCI, DriverBlocklist)...'
+
+  # Vulnerable Driver Blocklist -- Vanguard requires this enabled.
+  # AME may have set this to 0 during inject; force back to 1.
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\CI\Config
+    value: VulnerableDriverBlocklistEnable
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:safe]
+
+  # HVCI / Memory Integrity -- EAC and Vanguard recommend this on Win11.
+  # 1 = Enabled (HVCI active when boot integrity allows).
+  # '!vbs-off': these run unless the "Disable VBS" option is ticked.
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity
+    value: Enabled
+    type: REG_DWORD
+    data: '1'
+    option: '!vbs-off'
+    _tags: [mode:any, tier:safe]
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity
+    value: WasEnabledBy
+    type: REG_DWORD
+    data: '0'
+    option: '!vbs-off'
+    _tags: [mode:any, tier:safe]
+
+  # VBS (Virtualization-Based Security) -- HVCI runtime
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard
+    value: EnableVirtualizationBasedSecurity
+    type: REG_DWORD
+    data: '1'
+    option: '!vbs-off'
+    _tags: [mode:any, tier:safe]
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard
+    value: RequirePlatformSecurityFeatures
+    type: REG_DWORD
+    data: '1'
+    option: '!vbs-off'
+    _tags: [mode:any, tier:safe]
+
+  # vbs-off (Fortnite playbook): EAC/BattlEye don't need VBS, it costs ~5-8% FPS.
+  # Explicit 0 also counts as an opt-out from the Oct-2026 Memory Integrity
+  # auto-enable. Breaks Vanguard/FACEIT -- don't pick it for Valorant.
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity
+    value: Enabled
+    type: REG_DWORD
+    data: '0'
+    option: vbs-off
+    _tags: [mode:any, tier:safe]
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard
+    value: EnableVirtualizationBasedSecurity
+    type: REG_DWORD
+    data: '0'
+    option: vbs-off
+    _tags: [mode:any, tier:safe]
+  # Credential Guard keeps VBS alive on its own (default-on for some SKUs); Atlas clears it too.
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\Lsa
+    value: LsaCfgFlags
+    type: REG_DWORD
+    data: '0'
+    option: vbs-off
+    _tags: [mode:any, tier:safe]
+
+  # Kernel-mode Hardware-enforced Stack Protection breaks EAC (Epic: driver
+  # error 1275). Off is the Windows default; pin it so nothing flips it on.
+  - !registryValue
+    path: HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\KernelShadowStacks
+    value: Enabled
+    type: REG_DWORD
+    data: '0'
+    _tags: [mode:any, tier:safe]
+
+  # Defender real-time protection -- ensure NOT disabled by policy
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender
+    value: DisableAntiSpyware
+    type: REG_DWORD
+    data: '0'
+    _tags: [mode:any, tier:safe]
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection
+    value: DisableRealtimeMonitoring
+    type: REG_DWORD
+    data: '0'
+    _tags: [mode:any, tier:safe]
+
+  # No TamperProtection write: that key is guarded by Tamper Protection itself
+  # (on by default), so even TrustedInstaller gets access denied (VM run 2026-10-07).
+
+  # SmartScreen on (kept default, but explicit)
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+    value: EnableSmartScreen
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:safe]
+
+  # Hyper-V Hypervisor must be available for Vanguard's hypervisor-protected
+  # code integrity. hypervisorlaunchtype = auto.
+  # Not with vbs-off: once the hypervisor launches, 26H2 starts VBS (secure kernel /
+  # KeyGuard) even with EnableVirtualizationBasedSecurity=0 (VM run 2, 2026-10-07).
+  - !powerShell
+    command: 'bcdedit /set hypervisorlaunchtype auto'
+    option: '!vbs-off'
+    _tags: [mode:any, tier:safe]

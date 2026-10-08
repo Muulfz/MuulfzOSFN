@@ -1,0 +1,86 @@
+title: Fortnite-specific tuning (EAC-safe) + tournament readiness check
+actions:
+  - !status
+    status: 'Applying Fortnite tuning and checking tournament requirements...'
+
+  # High priority at process start. EAC protects the running process, so
+  # Task Manager can't raise it later -- IFEO PerfOptions is the only route.
+  # Never add Debugger / GlobalFlag under this key on an anti-cheat exe.
+  # Target the real game process, not the _EAC / _BE / FortniteLauncher stubs.
+  - !registryValue
+    path: HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\FortniteClient-Win64-Shipping.exe\PerfOptions
+    value: CpuPriorityClass
+    type: REG_DWORD
+    data: '3'
+    option: fortnite-high-priority
+    _tags: [mode:any, tier:safe]
+
+  # No IFEO for EpicGamesLauncher / EpicWebHelper: tried BelowNormal, but the launcher
+  # resets its own priority to Normal at start and CEF re-prioritises its helpers
+  # (VM run 5). IFEO itself works on 26H2 (notepad test), the apps override it.
+
+  # Epic Games Launcher (official MSI, per-machine). Fortnite itself needs an Epic
+  # login, so the user installs it from the launcher.
+  - !powerShell
+    command: |
+      $msi = Join-Path $env:TEMP 'EpicInstaller.msi'
+      $ProgressPreference = 'SilentlyContinue'
+      Invoke-WebRequest 'https://launcher-public-service-prod06.ol.epicgames.com/launcher/api/installer/download/EpicGamesLauncherInstaller.msi' -OutFile $msi -UseBasicParsing
+      $p = Start-Process msiexec.exe -ArgumentList '/i', $msi, '/qn', '/norestart' -Wait -PassThru
+      Remove-Item $msi -Force -ErrorAction SilentlyContinue
+      if ($p.ExitCode -notin 0, 3010) { throw "Epic installer exit code $($p.ExitCode)" }
+    option: install-epic
+    _tags: [mode:any, tier:safe]
+
+  # The only exclusion Epic suggests (help article a202300000010815). No launcher
+  # process / store-wide folders: MS lists program folders and bare process names
+  # among exclusions to avoid, and they were never measured to help.
+  - !powerShell
+    command: |
+      Add-MpPreference -ExclusionPath 'C:\Program Files\Epic Games\Fortnite' -ErrorAction SilentlyContinue
+      exit 0
+    _tags: [mode:any, tier:safe]
+
+  # Stop Windows Update from swapping the GPU driver you installed by hand.
+  # Off by default: a fresh install may need WU for NIC/chipset drivers.
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+    value: ExcludeWUDriversInQualityUpdate
+    type: REG_DWORD
+    data: '1'
+    option: wu-no-drivers
+    _tags: [mode:any, tier:safe]
+
+  # Setup notes on the desktop. Since 2026-02-19 every Fortnite PC tournament requires
+  # Secure Boot + TPM 2.0 + IOMMU (VT-d / AMD-Vi): BIOS settings a playbook can't flip,
+  # so report what's missing. Win32_DeviceGuard AvailableSecurityProperties 3 = DMA
+  # protection (IOMMU). Third-party NIC filters (Killer/SmartByte, VPNs, "boosters")
+  # inspect every packet (MS NIC tuning: "can significantly decrease networking
+  # performance"), so list them. The endgame CPU spike is the game simulating ~50 nearby
+  # players, so the biggest lever left is in-game settings (Epic 2026 guide, NVIDIA Reflex).
+  - !powerShell
+    command: |
+      $sb  = try { Confirm-SecureBootUEFI -ErrorAction Stop } catch { $false }
+      $tpm = try { (Get-Tpm -ErrorAction Stop).TpmReady } catch { $false }
+      $dg  = Get-CimInstance -Namespace root\Microsoft\Windows\DeviceGuard -ClassName Win32_DeviceGuard -ErrorAction SilentlyContinue
+      $iommu = [bool]($dg -and ($dg.AvailableSecurityProperties -contains 3))
+      $missing = @()
+      if (-not $sb)    { $missing += '  Secure Boot OFF -> enable Secure Boot in BIOS (UEFI mode, CSM off)' }
+      if (-not $tpm)   { $missing += '  TPM 2.0 not ready -> enable fTPM (AMD) / PTT (Intel) in BIOS' }
+      if (-not $iommu) { $missing += '  IOMMU OFF -> enable VT-d (Intel) / AMD-Vi or IOMMU (AMD) in BIOS' }
+      if (-not $missing) { $missing = @('  OK') }
+      $filters = @(Get-NetAdapterBinding -ErrorAction SilentlyContinue | Where-Object { $_.Enabled -and $_.ComponentID -notlike 'ms_*' -and $_.ComponentID -notlike 'vms_*' } |
+                   ForEach-Object { '  ' + $_.Name + ': ' + $_.DisplayName } | Sort-Object -Unique)
+      if (-not $filters) { $filters = @('  none') }
+      @('MuulfzOSFN - Fortnite setup notes', '',
+        'Tournament readiness (Secure Boot + TPM 2.0 + IOMMU, required by Epic since Feb 2026):') + $missing + @('',
+        'Third-party filters on your network adapters (each inspects every packet; remove what you do not need):') + $filters + @('',
+        'In-game settings that cut endgame CPU load (Epic 2026 guide, NVIDIA):',
+        '  Rendering Mode: Performance',
+        '  NVIDIA Reflex: On + Boost',
+        '  View Distance: Near, Shadows: Off, Effects: Low, Meshes: Low',
+        '  Replays: turn off all Record Replays toggles',
+        '  Frame rate limit: the fps you can hold in endgames (or refresh rate - 3 with G-Sync/FreeSync)') |
+        Out-File "$env:PUBLIC\Desktop\Fortnite - MuulfzOSFN.txt" -Encoding utf8
+      exit 0
+    _tags: [mode:any, tier:safe]

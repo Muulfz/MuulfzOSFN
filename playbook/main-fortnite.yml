@@ -1,0 +1,30 @@
+title: MuulfzOS Fortnite
+description: |
+  Competitive Fortnite playbook for Win11 24H2 / 25H2 / 26H2 (26100 / 26200 / 26300).
+  Keeps everything Fortnite's anti-cheat checks: Secure Boot, TPM, IOMMU,
+  Defender, driver signing, Vulnerable Driver Blocklist, default mitigations.
+  Only measured or zero-risk tweaks; placebo (TCP/Nagle, bcdedit timers,
+  forced MSI) left out. Options live in playbook-fortnite.conf FeaturePages.
+
+# Deliberately NOT included (research 2026-10, see README "What it does not do"):
+#   Nagle / TcpAck / TCP tweaks          Fortnite matches run on UDP
+#   forced MSI mode                      dropped by Atlas (BSoD); NVIDIA sets it per architecture
+#   Win32PrioritySeparation 0x26, MMCSS  same behaviour as the client default / only audio joins MMCSS
+#   mouse/keyboard queue size            no maintained project sets it; risky with 4-8 kHz mice
+#   NetworkThrottlingIndex, RSS forcing  placebo at game packet rates (VM UDP stress test)
+#   store-wide Defender exclusions       only the Fortnite folder is excluded (registry/fortnite.yml)
+actions:
+  - !include "restore-point.yml"
+  - !include "registry/anticheat-safe.yml"
+  - !include "registry/power-hags-vrr.yml"
+  - !include "registry/fortnite.yml"
+  - !include "registry/gamer-input.yml"
+  - !include "registry/nic-gaming.yml"
+  - !include "registry/fortnite-qol.yml"
+  - !include "registry/performance-options.yml"
+  - !include "registry/onedrive-removal.yml"
+  - !include "services/disable.yml"
+  - !include "appx/trim.yml"
+  - !include "appx/ai-26h2.yml"
+  - !include "appx/fortnite-debloat.yml"
+  - !include "branding.yml"

@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- MuulfzOS wallpaper source. Render 3840x2160 with Edge headless, then save as JPEG q92
+     to playbook/Executables/wallpaper.jpg:
+     msedge --headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=3840,2160
+            --screenshot=wallpaper.png playbook/branding/wallpaper.html -->
+<html><meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 3840px; height: 2160px; overflow: hidden; background: #06090c; }
+  .bg { position: absolute; inset: 0;
+        background:
+          radial-gradient(ellipse 1500px 1100px at 50% 44%, rgba(90, 215, 240, .16), transparent 70%),
+          radial-gradient(ellipse 2600px 1800px at 50% 40%, #12202b 0%, #0a1016 55%, #05070a 100%); }
+  .lines { position: absolute; inset: 0; opacity: .05;
+           background: repeating-linear-gradient(135deg, #9fe9f7 0 2px, transparent 2px 64px); }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%); }
+  .center { position: absolute; left: 50%; top: 43%; transform: translate(-50%, -50%); text-align: center; }
+  .logo { width: 620px; height: 620px; filter: drop-shadow(0 0 70px rgba(90, 215, 240, .35)) drop-shadow(0 30px 60px rgba(0,0,0,.6)); }
+  .word { margin-top: 70px; font: 700 168px/1 Bahnschrift, "Segoe UI Variable Display", "Segoe UI", sans-serif;
+          letter-spacing: .2em; color: #ece5d6; padding-left: .2em; text-shadow: 0 6px 40px rgba(0,0,0,.6); }
+  .word b { color: #5ad7f0; font-weight: 700; }
+  .rule { width: 760px; height: 3px; margin: 54px auto 40px; background: linear-gradient(90deg, transparent, #5ad7f0, transparent); }
+  .tag { font: 600 52px/1 Bahnschrift, "Segoe UI", sans-serif; letter-spacing: .55em; padding-left: .55em; color: #8fdcec; }
+</style>
+<body>
+  <div class="bg"></div><div class="lines"></div><div class="vignette"></div>
+  <div class="center">
+    <img class="logo" src="../Images/playbook.png" alt="">
+    <div class="word">MUULFZ<b>OS</b></div>
+    <div class="rule"></div>
+    <div class="tag">FORTNITE EDITION</div>
+  </div>
+</body></html>

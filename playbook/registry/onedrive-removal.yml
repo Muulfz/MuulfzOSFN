@@ -1,0 +1,66 @@
+title: Remove OneDrive + lock against per-user reinstall
+actions:
+  - !status
+    status: 'Uninstalling OneDrive (system + per-user) and locking out reinstall...'
+
+  # Block OneDrive sync via group policy -- this is the "official" off switch.
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive
+    value: DisableFileSyncNGSC
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive
+    value: DisableFileSync
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+
+  # The Default profile's Run\OneDriveSetup (/thfirstsetup) installs OneDrive into every
+  # new account at first logon -- the account AME creates on the ISO path got it back
+  # (ISO VM run). HKCU + AME's AllUsers scope reaches the Default hive.
+  - !registryValue
+    path: HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+    value: OneDriveSetup
+    operation: delete
+    _tags: [mode:any, tier:aggressive]
+
+  # No Explorer-pin tweak: writing under ...\Desktop\NameSpace\{OneDrive CLSID} *registers*
+  # a desktop item, and once OneDrive is uninstalled it shows as a blank icon (VM run 4).
+  # The uninstaller removes its own nav-pane pin.
+
+  # Run the bundled OneDrive uninstaller (system + Win32 + Appx fallback).
+  # OneDrive can be installed three ways on Win11:
+  #   1. SysWOW64\OneDriveSetup.exe (machine-scope, what new ISOs ship)
+  #   2. Per-user %LOCALAPPDATA%\Microsoft\OneDrive\OneDriveSetup.exe
+  #   3. AppX provisioned package (rare, recent insider builds)
+  # Each path needs a different uninstall command -- run all three.
+  # runas CurrentUserElevated: AME's default is TrustedInstaller, where $env:USERPROFILE /
+  # LOCALAPPDATA point at the system profile and the per-user OneDrive survives (VM run 2026-10-07).
+  - !powerShell
+    runas: CurrentUserElevated
+    command: |
+      Get-Process OneDrive -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+      $exes = @(
+        "$env:SystemRoot\SysWOW64\OneDriveSetup.exe",
+        "$env:SystemRoot\System32\OneDriveSetup.exe"
+      )
+      foreach ($p in $exes) {
+        if (Test-Path $p) { Start-Process -FilePath $p -ArgumentList '/uninstall' -Wait -NoNewWindow -ErrorAction SilentlyContinue }
+      }
+      # AppX provisioning (newer ISOs may ship OneDrive as AppX)
+      Get-AppxPackage -AllUsers '*Microsoft.OneDriveSync*' -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
+      Get-AppxProvisionedPackage -Online | Where-Object DisplayName -Like '*OneDriveSync*' |
+        Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue | Out-Null
+      # Clean residual folders (won't error if missing)
+      $paths = @(
+        "$env:USERPROFILE\OneDrive",
+        "$env:LOCALAPPDATA\Microsoft\OneDrive",
+        "$env:PROGRAMDATA\Microsoft OneDrive",
+        "$env:SystemDrive\OneDriveTemp"
+      )
+      foreach ($d in $paths) {
+        if (Test-Path $d) { Remove-Item -Recurse -Force $d -ErrorAction SilentlyContinue }
+      }
+    _tags: [mode:any, tier:aggressive]

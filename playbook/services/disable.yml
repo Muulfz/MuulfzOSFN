@@ -1,0 +1,46 @@
+title: Disable telemetry + consumer-experience services
+actions:
+  - !status
+    status: Disabling DiagTrack, dmwappushservice, and telemetry scheduled tasks...
+  - !service
+    name: DiagTrack
+    startup: 4
+    _tags:
+      - mode:any
+      - tier:aggressive
+  - !service
+    name: dmwappushservice
+    startup: 4
+    _tags:
+      - mode:any
+      - tier:aggressive
+  # Appraiser names differ per build (25H2 and 26H2 have only "... Exp", not the old
+  # two). A missing !scheduledTask logs as Error on the ISO/OOBE path, so disable
+  # whichever exist.
+  - !powerShell
+    command: |
+      Get-ScheduledTask -TaskPath '\Microsoft\Windows\Application Experience\' -ErrorAction SilentlyContinue |
+        Where-Object TaskName -in 'ProgramDataUpdater', 'Microsoft Compatibility Appraiser', 'Microsoft Compatibility Appraiser Exp' |
+        Disable-ScheduledTask -ErrorAction SilentlyContinue | Out-Null
+      exit 0
+    _tags:
+      - mode:any
+      - tier:aggressive
+  - !scheduledTask
+    operation: disable
+    _tags:
+      - mode:any
+      - tier:aggressive
+    path: \Microsoft\Windows\Maps\MapsUpdateTask
+  - !scheduledTask
+    operation: disable
+    _tags:
+      - mode:any
+      - tier:aggressive
+    path: \Microsoft\Windows\Feedback\Siuf\DmClient
+  - !scheduledTask
+    operation: disable
+    _tags:
+      - mode:any
+      - tier:aggressive
+    path: \Microsoft\Windows\Customer Experience Improvement Program\Consolidator

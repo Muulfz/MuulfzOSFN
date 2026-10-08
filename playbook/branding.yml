@@ -1,0 +1,25 @@
+title: MuulfzOS wallpaper + lock screen (wizard option, ticked by default)
+# Source: branding/wallpaper.html, rendered to Executables/wallpaper.jpg (3840x2160).
+actions:
+  # exeDir: AME runs this from the playbook's Executables folder (live and ISO/OOBE).
+  - !powerShell
+    command: |
+      $dir = 'C:\Windows\Web\Wallpaper\MuulfzOS'
+      New-Item -ItemType Directory -Force $dir | Out-Null
+      Copy-Item 'wallpaper.jpg' (Join-Path $dir 'wallpaper.jpg') -Force
+      exit 0
+    exeDir: true
+    option: muulfz-wallpaper
+    _tags: [mode:any, tier:safe]
+
+  # Desktop: HKCU with AME's AllUsers scope also lands in the Default profile, so the
+  # account created at install gets it. BackgroundType 0 = picture (not Spotlight).
+  - !registryValue {path: 'HKCU\Control Panel\Desktop', value: Wallpaper, type: REG_SZ, data: 'C:\Windows\Web\Wallpaper\MuulfzOS\wallpaper.jpg', option: muulfz-wallpaper, _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\Control Panel\Desktop', value: WallpaperStyle, type: REG_SZ, data: '10', option: muulfz-wallpaper, _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\Control Panel\Desktop', value: TileWallpaper, type: REG_SZ, data: '0', option: muulfz-wallpaper, _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers', value: BackgroundType, type: REG_DWORD, data: '0', option: muulfz-wallpaper, _tags: [mode:any, tier:safe]}
+
+  # Lock screen via the Personalization CSP keys (honoured on Pro, unlike the GPO).
+  - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP', value: LockScreenImagePath, type: REG_SZ, data: 'C:\Windows\Web\Wallpaper\MuulfzOS\wallpaper.jpg', option: muulfz-wallpaper, _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP', value: LockScreenImageUrl, type: REG_SZ, data: 'C:\Windows\Web\Wallpaper\MuulfzOS\wallpaper.jpg', option: muulfz-wallpaper, _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP', value: LockScreenImageStatus, type: REG_DWORD, data: '1', option: muulfz-wallpaper, _tags: [mode:any, tier:safe]}

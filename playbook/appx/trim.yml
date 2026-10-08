@@ -1,0 +1,149 @@
+title: Trim Copilot / Recall / AI / Consumer-Experience Appx
+actions:
+  - !status
+    status: 'Removing Copilot, Recall, Click-to-Do, and consumer-experience packages...'
+
+  # === AI / Recall / Click-to-Do (25H2 + Copilot+ ) ===
+  - !appx
+    name: '*Microsoft.Copilot*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.Windows.Copilot*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*MicrosoftWindows.Client.AIX*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.Windows.AI.Recall*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.WindowsAICopilotRuntime*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.Windows.AppManagement.AICopilot*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+
+  # === Bing / Web search ===
+  - !appx
+    name: '*Microsoft.BingSearch*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.BingNews*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.BingWeather*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+
+  # === Cortana / legacy ===
+  - !appx
+    name: '*Microsoft.549981C3F5F10*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+
+  # === Widgets / WebExperience ===
+  - !appx
+    name: '*MicrosoftWindows.Client.WebExperience*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+
+  # === Teams (consumer) ===
+  - !appx
+    name: '*MicrosoftTeams*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+
+  # === Misc consumer bloat (safe to remove) ===
+  - !appx
+    name: '*Microsoft.MicrosoftSolitaireCollection*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.Getstarted*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.GetHelp*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.YourPhone*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.WindowsFeedbackHub*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Microsoft.MicrosoftOfficeHub*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+  - !appx
+    name: '*Clipchamp.Clipchamp*'
+    type: family
+    operation: remove
+    _tags: [mode:any, tier:aggressive]
+
+  # === Search box / start menu suggestions ===
+  - !registryValue
+    path: HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
+    value: DisableSearchBoxSuggestions
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+  - !registryValue
+    path: HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+    value: SystemPaneSuggestionsEnabled
+    type: REG_DWORD
+    data: '0'
+    _tags: [mode:any, tier:aggressive]
+  - !registryValue
+    path: HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+    value: SubscribedContent-338388Enabled
+    type: REG_DWORD
+    data: '0'
+    _tags: [mode:any, tier:aggressive]
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot
+    value: TurnOffWindowsCopilot
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI
+    value: DisableAIDataAnalysis
+    type: REG_DWORD
+    data: '1'
+    _tags: [mode:any, tier:aggressive]
+  - !registryValue
+    path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI
+    value: AllowRecallEnablement
+    type: REG_DWORD
+    data: '0'
+    _tags: [mode:any, tier:aggressive]

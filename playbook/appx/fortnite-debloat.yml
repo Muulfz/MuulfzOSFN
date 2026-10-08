@@ -1,0 +1,103 @@
+title: Fortnite build extra debloat -- leftovers seen on 26H2 after appx/trim.yml, ghost pins, promo installs
+actions:
+  - !status
+    status: 'Removing Outlook, Teams, To Do, Dev Home and other leftovers; cleaning taskbar and Start pins...'
+
+  # Inventory of a 26300.9550 VM after trim.yml (2026-10-07). Kept on purpose:
+  # Store, Xbox app + Game Bar (Xbox mode, X3D scheduling, Fortnite Xbox build),
+  # Edge (WebView2 host), Photos, Paint, Snipping Tool, Notepad, Calculator,
+  # Terminal, Media Player, codecs.
+  - !appx {name: '*Microsoft.OutlookForWindows*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*MSTeams*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*Microsoft.Todos*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*Microsoft.PowerAutomateDesktop*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*Microsoft.Windows.DevHome*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*MicrosoftCorporationII.MicrosoftFamily*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*MicrosoftCorporationII.QuickAssist*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*MicrosoftWindows.CrossDevice*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*Microsoft.MicrosoftStickyNotes*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*Microsoft.WindowsAlarms*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*Microsoft.WindowsCamera*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+  - !appx {name: '*Microsoft.WindowsSoundRecorder*', type: family, operation: remove, _tags: [mode:any, tier:aggressive]}
+
+  # Stop Windows from silently re-installing promoted apps (WhatsApp, LinkedIn,
+  # Candy Crush placeholders) -- same values Atlas sets.
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SilentInstalledAppsEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: PreInstalledAppsEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: PreInstalledAppsEverEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: OemPreInstalledAppsEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+
+  # Taskbar: removing Copilot/Outlook left grey ghost icons (VM run 3). They are
+  # "auxiliary pins"; zero them and reset Taskband so the bar re-seeds clean (Atlas approach).
+  - !registryKey {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband', operation: delete, _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband\AuxilliaryPins', value: MailPin, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband\AuxilliaryPins', value: CopilotPWAPin, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+
+  # Start: replace the promo pins with a gaming set. A missing target (e.g. Epic
+  # not installed) is just skipped by Start.
+  - !registryValue
+    path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Start'
+    value: ConfigureStartPins
+    type: REG_SZ
+    data: '{"pinnedList":[{"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Epic Games Launcher.lnk"},{"packagedAppId":"Microsoft.GamingApp_8wekyb3d8bbwe!Microsoft.Xbox.App"},{"packagedAppId":"Microsoft.WindowsStore_8wekyb3d8bbwe!App"},{"packagedAppId":"windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"},{"desktopAppLink":"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\File Explorer.lnk"},{"packagedAppId":"Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"},{"packagedAppId":"Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"},{"packagedAppId":"Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"}]}'
+    _tags: [mode:any, tier:aggressive]
+  - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Start', value: ConfigureStartPins_ProviderSet, type: REG_DWORD, data: '1', _tags: [mode:any, tier:aggressive]}
+  # The policy is read when a profile's Start is first built (new user / ISO OOBE).
+  # 26H2's new Start ignores it on an existing profile (VM run 4) and keeps no
+  # start*.bin; what does work live is dropping the promo placeholder collections
+  # (WhatsApp, LinkedIn stubs) from CloudStore.
+  - !powerShell
+    runas: CurrentUserElevated
+    command: |
+      Get-ChildItem 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CloudStore\Store\Cache\DefaultAccount' -ErrorAction SilentlyContinue |
+        Where-Object { $_.PSChildName -match 'placeholdertilecollection' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+      # Start's ad / install-stub config (23H2+)
+      Remove-ItemProperty 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Start' -Name Config -Force -ErrorAction SilentlyContinue
+      # Best-effort: on a brand-new OOBE profile nothing exists yet, and the suppressed
+      # miss would still make powershell -Command exit 1 (AME counts that as a failure).
+      exit 0
+    _tags: [mode:any, tier:aggressive]
+
+  # Taskbar for accounts created after this (the ISO/OOBE path): MailPin=0 in the
+  # Default hive did not stop Windows pinning Outlook at first logon (ISO VM run).
+  # A Default-profile LayoutModification.xml with PinListPlacement=Replace does.
+  - !powerShell
+    command: |
+      $xml = @'
+      <?xml version="1.0" encoding="utf-8"?>
+      <LayoutModificationTemplate xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification" xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" Version="1">
+        <CustomTaskbarLayoutCollection PinListPlacement="Replace">
+          <defaultlayout:TaskbarLayout>
+            <taskbar:TaskbarPinList>
+              <taskbar:DesktopApp DesktopApplicationID="Microsoft.Windows.Explorer" />
+              <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" />
+              <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Epic Games Launcher.lnk" />
+            </taskbar:TaskbarPinList>
+          </defaultlayout:TaskbarLayout>
+        </CustomTaskbarLayoutCollection>
+      </LayoutModificationTemplate>
+      '@
+      $dir = 'C:\Users\Default\AppData\Local\Microsoft\Windows\Shell'
+      New-Item -ItemType Directory -Force $dir | Out-Null
+      Set-Content -LiteralPath (Join-Path $dir 'LayoutModification.xml') -Value $xml -Encoding UTF8
+    _tags: [mode:any, tier:aggressive]
+
+  # Windows still appends the new-Outlook stub pin at an account's first logon, even
+  # with the Replace layout. Resetting Taskband once after that makes Explorer
+  # rebuild from the layout above -> Explorer, Edge, Epic only (tested live, ISO2 VM).
+  - !registryValue
+    path: HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce
+    value: MuulfzTaskbarReset
+    type: REG_SZ
+    data: 'powershell.exe -NoProfile -WindowStyle Hidden -Command "Start-Sleep 15; Remove-Item ''HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband'' -Recurse -Force; Stop-Process -Name explorer -Force"'
+    _tags: [mode:any, tier:aggressive]
+
+  # Edge registers itself to launch at logon and stays resident (Startup boost,
+  # ~126 MB in the VM RAM list). Edge itself stays (WebView2 host).
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Edge', value: StartupBoostEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Edge', value: BackgroundModeEnabled, type: REG_DWORD, data: '0', _tags: [mode:any, tier:aggressive]}
+
+  # Spotlight desktop wallpaper puts a "Learn about this picture" icon on the desktop.
+  - !registryValue {path: 'HKCU\Software\Policies\Microsoft\Windows\CloudContent', value: DisableSpotlightCollectionOnDesktop, type: REG_DWORD, data: '1', _tags: [mode:any, tier:aggressive]}
+  # No taskKill of explorer/StartMenuExperienceHost: AME reboots at the end anyway, and
+  # on 26H2 live apply AME hung after killing explorer (black screen, no reboot; VM v5 run).

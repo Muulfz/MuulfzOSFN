@@ -1,0 +1,9 @@
+title: System Restore point (always first)
+actions:
+  - !status
+    status: Creating System Restore point (up to 60 s)...
+  - !powerShell 'Enable-ComputerRestore -Drive ''C:\'' -ErrorAction SilentlyContinue'
+  # Best-effort: at OOBE VSS may not be ready, and Windows refuses a 2nd point within 24 h.
+  - !powerShell 'try { Checkpoint-Computer -Description ''MuulfzOTMZ playbook (before)'' -RestorePointType ''MODIFY_SETTINGS'' -ErrorAction Stop } catch { Write-Warning $_ }'
+  - !powerShell 'New-Item -ItemType Directory -Force -Path "$env:PROGRAMDATA\MuulfzOTMZ\rollback" | Out-Null'
+  - !powerShell '@{ applied_utc = (Get-Date).ToUniversalTime().ToString(''o''); version = ''0.9.0'' } | ConvertTo-Json | Out-File "$env:PROGRAMDATA\MuulfzOTMZ\install-state.json" -Encoding utf8'
