@@ -7,7 +7,7 @@ and keeps everything Easy Anti-Cheat and Fortnite tournaments require.</p>
 
 <p align="center"><img src="docs/wallpaper-preview.jpg" width="720" alt="MuulfzOS wallpaper"></p>
 
-> **Status: 0.9.0 beta.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
+> **Status: 0.9.1 beta.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
 > the anti-cheat invariants pass. It has not been verified on bare metal with Fortnite yet,
 > because Easy Anti-Cheat refuses to run in a VM. Reports from real PCs are welcome.
 
@@ -110,7 +110,12 @@ These figures don't capture what counts most in a match: real FPS, 1% lows and n
 - No pending updates
 - Internet, if you want the Epic launcher installed
 
-**Live, on your current Windows:**
+**Live, on your current Windows:** your files and the programs you installed are not touched.
+The removed apps can be reinstalled from the Store. Make sure OneDrive files you need are kept on
+the device before applying. Don't use it on work/school-managed PCs or together with other optimizers.
+A restore point *MuulfzOS (before)* is created even if Windows already made one today. Details,
+in Portuguese: [docs/TUTORIAL-pt-PT.md](docs/TUTORIAL-pt-PT.md#riscos-de-aplicar-no-pc-atual).
+
 1. Open AME Wizard.
 2. Drag in `MuulfzOSFN-<version>.apbx` and follow the pages.
 3. AME creates a restore point, applies the playbook and reboots.

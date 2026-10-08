@@ -4,14 +4,14 @@ O MuulfzOS é um *playbook* para o [AME Wizard](https://ameliorated.io) que otim
 para Fortnite competitivo. Os ajustes **não mexem em nada que o anti-cheat ou os torneios
 exigem**: Secure Boot, TPM, IOMMU, Defender e assinatura de drivers ficam intactos.
 
-> **Versão 0.9.0 (beta).** Testada em máquinas virtuais com o Windows 11 25H2 e 26H2. Ainda
+> **Versão 0.9.1 (beta).** Testada em máquinas virtuais com o Windows 11 25H2 e 26H2. Ainda
 > falta confirmação em PCs reais a jogar Fortnite, por isso conta-nos como correu.
 
 ## Do que precisas
 
 - PC com **Windows 11 24H2, 25H2 ou 26H2** (64 bits)
 - **Ligação à Internet**, para o Windows Update e o Epic Games Launcher
-- O ficheiro **`MuulfzOSFN-0.9.0.apbx`**, a transferir em [Releases](https://github.com/Muulfz/MuulfzOSFN/releases)
+- O ficheiro **`MuulfzOSFN-0.9.1.apbx`**, a transferir em [Releases](https://github.com/Muulfz/MuulfzOSFN/releases)
 - O **AME Wizard**, a transferir em [ameliorated.io](https://ameliorated.io)
 - Para uma instalação de raiz: uma **pen USB de 16 GB ou mais** (vai ser apagada) e o [Rufus](https://rufus.ie)
 
@@ -23,9 +23,28 @@ Há duas formas de instalar. A **instalação de raiz** (opção B) dá o melhor
 
 1. Instala todas as atualizações no **Windows Update** e reinicia. O AME recusa avançar se houver atualizações pendentes.
 2. Abre o **AME Wizard**.
-3. Arrasta o `MuulfzOSFN-0.9.0.apbx` para a janela, ou clica em **Use Existing** e escolhe o ficheiro.
+3. Arrasta o `MuulfzOSFN-0.9.1.apbx` para a janela, ou clica em **Use Existing** e escolhe o ficheiro.
 4. Segue as páginas e escolhe as opções (vê a secção [Opções do assistente](#opções-do-assistente)).
 5. O AME cria um **ponto de restauro**, aplica tudo (cerca de 10 minutos) e reinicia sozinho.
+
+### Riscos de aplicar no PC atual
+
+Podes aplicar no Windows que já usas: **os teus ficheiros e os programas que instalaste não são tocados**. Mas convém saberes o que muda.
+
+- **Apps removidas.** Outlook, Teams, OneDrive, Ligação ao Telemóvel, Copilot, Câmara, Alarmes, Notas Autocolantes, Gravador de Som, Clipchamp, Solitaire, Dicas e afins. Voltam a instalar-se pela Microsoft Store se precisares.
+- **OneDrive.** Antes de aplicar, garante que os ficheiros que queres no PC estão descarregados: clique direito na pasta, *Manter sempre neste dispositivo*. Os ficheiros que estão só na nuvem continuam na nuvem, acessíveis em onedrive.com.
+- **VBS / Memory Integrity desligado.** Ganhas FPS, mas perdes uma camada de proteção do Windows. Se jogas Valorant ou FACEIT, desmarca esta opção.
+- **Comportamento diferente:**
+  - O rato fica sem aceleração, o que muda a sensação no Windows. No jogo é o que queres.
+  - O Wi-Fi desliga-se quando o cabo de rede está ligado.
+  - Em desktops, o plano de energia Ultimate gasta um pouco mais de energia.
+  - O Windows Update deixa de reiniciar o PC entre as 10:00 e as 04:00.
+- **Outros otimizadores** ("boosters", outros playbooks, scripts de tweaks): podem entrar em conflito. Usa só um.
+- **PC do trabalho ou da escola**, com domínio ou gestão da empresa: não apliques.
+
+**Antes de aplicar:** faz cópia de segurança do que é importante, instala as atualizações e reinicia.
+
+**Para desfazer:** o MuulfzOS cria um ponto de restauro, *MuulfzOS (before)*, mesmo que já exista outro de hoje. O *Restauro do sistema* repõe as definições, mas não reinstala as apps removidas (essas voltam pela Store). A forma mais limpa de começar do zero continua a ser a instalação de raiz.
 
 ## Opção B: instalação de raiz com pen USB (recomendado)
 
@@ -39,7 +58,7 @@ Há duas formas de instalar. A **instalação de raiz** (opção B) dá o melhor
    - ✅ *Disable BitLocker automatic device encryption*
    - ⬜ *Create a local account with username*: **deixa desmarcado**, para criares a tua conta durante a instalação.
    - ⬜ *Remove requirement for 4GB+ RAM, Secure Boot and TPM 2.0*: **deixa desmarcado**, porque os torneios exigem estas três coisas.
-4. Quando o Rufus terminar, copia para a pen USB o **AME Wizard** e o **`MuulfzOSFN-0.9.0.apbx`**.
+4. Quando o Rufus terminar, copia para a pen USB o **AME Wizard** e o **`MuulfzOSFN-0.9.1.apbx`**.
 
 ### 2. Configurar a BIOS
 
@@ -60,7 +79,7 @@ Depois, arranca a partir da pen USB em modo **UEFI**.
 ### 4. Aplicar o MuulfzOS
 
 1. Na pen USB, abre o **AME Wizard**.
-2. Clica em **Use Existing** e escolhe o `MuulfzOSFN-0.9.0.apbx`.
+2. Clica em **Use Existing** e escolhe o `MuulfzOSFN-0.9.1.apbx`.
 3. Segue as páginas, escolhe as opções e confirma. O PC reinicia sozinho no fim.
 
 ---
@@ -98,7 +117,7 @@ Na área de trabalho aparece o ficheiro **"Fortnite - MuulfzOSFN.txt"**. Mostra 
 
 **Funciona em portáteis?** Sim. Em portáteis o plano de energia fica em Equilibrado e os ajustes só para desktop (hibernação, poupança de energia USB/PCIe) não são aplicados.
 
-**Como desfaço?** O AME cria um ponto de restauro antes de aplicar; usa o *Restauro do sistema*. Em último caso, reinstala o Windows.
+**Como desfaço?** Vê [Riscos de aplicar no PC atual](#riscos-de-aplicar-no-pc-atual).
 
 **O Windows Update continua a funcionar?** Sim. Só deixa de reiniciar o PC entre as 10:00 e as 04:00.
 

@@ -3,7 +3,22 @@ actions:
   - !status
     status: Creating System Restore point (up to 60 s)...
   - !powerShell 'Enable-ComputerRestore -Drive ''C:\'' -ErrorAction SilentlyContinue'
-  # Best-effort: at OOBE VSS may not be ready, and Windows refuses a 2nd point within 24 h.
-  - !powerShell 'try { Checkpoint-Computer -Description ''MuulfzOTMZ playbook (before)'' -RestorePointType ''MODIFY_SETTINGS'' -ErrorAction Stop } catch { Write-Warning $_ }'
+  # Windows skips a new point if one was made in the last 24 h (often by Windows Update),
+  # which is exactly the live-apply case. Lift that limit only for this point
+  # (SystemRestorePointCreationFrequency, MS docs), then put the previous value back.
+  # Best-effort: at OOBE VSS may not be ready.
+  - !powerShell
+    command: |
+      $k = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore'
+      $old = (Get-ItemProperty $k -Name SystemRestorePointCreationFrequency -ErrorAction SilentlyContinue).SystemRestorePointCreationFrequency
+      try {
+        Set-ItemProperty $k SystemRestorePointCreationFrequency 0 -Type DWord
+        Checkpoint-Computer -Description 'MuulfzOS (before)' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop
+      } catch { Write-Warning $_ }
+      finally {
+        if ($null -eq $old) { Remove-ItemProperty $k SystemRestorePointCreationFrequency -ErrorAction SilentlyContinue }
+        else { Set-ItemProperty $k SystemRestorePointCreationFrequency $old -Type DWord }
+      }
+      exit 0
   - !powerShell 'New-Item -ItemType Directory -Force -Path "$env:PROGRAMDATA\MuulfzOTMZ\rollback" | Out-Null'
-  - !powerShell '@{ applied_utc = (Get-Date).ToUniversalTime().ToString(''o''); version = ''0.9.0'' } | ConvertTo-Json | Out-File "$env:PROGRAMDATA\MuulfzOTMZ\install-state.json" -Encoding utf8'
+  - !powerShell '@{ applied_utc = (Get-Date).ToUniversalTime().ToString(''o''); version = ''0.9.1'' } | ConvertTo-Json | Out-File "$env:PROGRAMDATA\MuulfzOTMZ\install-state.json" -Encoding utf8'

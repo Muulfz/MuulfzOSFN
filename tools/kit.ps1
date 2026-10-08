@@ -1,5 +1,5 @@
 # Release kit: builds the apbx, then dist/kit/ with the versioned apbx, wallpaper,
-# PT-BR read-me and SHA256SUMS, zipped as dist/MuulfzOSFN-<version>-kit.zip.
+# pt-PT read-me + tutorial and SHA256SUMS, zipped as dist/MuulfzOSFN-<version>-kit.zip.
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 & (Join-Path $PSScriptRoot 'build.ps1')
@@ -14,15 +14,19 @@ Copy-Item playbook/Executables/wallpaper.jpg "$kit/MuulfzOS-wallpaper-4k.jpg"
 MuulfzOS Fortnite Edition $ver
 https://github.com/Muulfz/MuulfzOSFN
 
-1. Baixe o AME Wizard: https://ameliorated.io
-2. Windows atual: arraste MuulfzOSFN-$ver.apbx para o AME e siga o assistente.
-3. Instalacao limpa: no AME, arraste a ISO oficial do Windows 11 (microsoft.com) e depois
-   o .apbx, escolha modificar a ISO e crie a sua conta (nome e senha) quando o AME pedir.
-   Grave a ISO num pen drive (Rufus ou o proprio AME) e instale.
-4. Depois, abra "Fortnite - MuulfzOSFN.txt" na area de trabalho.
+Tutorial completo: TUTORIAL-pt-PT.md (abre com o Bloco de Notas ou no GitHub).
 
-Confira os arquivos com SHA256SUMS.txt (PowerShell: Get-FileHash <arquivo>).
+1. Transfere o AME Wizard: https://ameliorated.io
+2. Windows atual: arrasta MuulfzOSFN-$ver.apbx para o AME e segue o assistente.
+   Le antes a secao "Riscos de aplicar no PC atual" do tutorial.
+3. Instalacao de raiz (recomendado): grava a ISO oficial do Windows 11 numa pen USB com o
+   Rufus (sem conta Microsoft, sem BitLocker), instala e cria a tua conta. Depois abre o AME
+   e escolhe o .apbx.
+4. No fim, abre "Fortnite - MuulfzOSFN.txt" na area de trabalho.
+
+Confirma os ficheiros com SHA256SUMS.txt (PowerShell: Get-FileHash <ficheiro>).
 "@ | Set-Content "$kit/LEIA-ME.txt" -Encoding utf8
+Copy-Item docs/TUTORIAL-pt-PT.md "$kit/TUTORIAL-pt-PT.md"
 Get-ChildItem $kit -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object {
     '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name } | Set-Content "$kit/SHA256SUMS.txt" -Encoding ascii
 $zip = "dist/MuulfzOSFN-$ver-kit.zip"
