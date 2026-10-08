@@ -11,12 +11,14 @@ and keeps everything Easy Anti-Cheat and Fortnite tournaments require.</p>
 > the anti-cheat invariants pass. It has not been verified on bare metal with Fortnite yet,
 > because Easy Anti-Cheat refuses to run in a VM. Reports from real PCs are welcome.
 
-## Guia rápido (PT-BR)
+## Guia rápido (pt-PT)
 
-1. Baixe o **AME Wizard** em [ameliorated.io](https://ameliorated.io) e o arquivo `MuulfzOSFN-*.apbx` em [Releases](../../releases).
-2. **No Windows atual:** arraste o `.apbx` para o AME e siga o assistente. Ele cria um ponto de restauração antes.
-3. **Instalação limpa (pen drive):** no AME, arraste a ISO oficial do Windows 11 (baixe em microsoft.com) e depois o `.apbx`, e escolha *modificar ISO*. O AME pede o nome e a senha da sua conta, grava a ISO e você a coloca no pen drive com o Rufus ou o próprio AME.
-4. No fim, abra o arquivo **"Fortnite - MuulfzOSFN.txt"** na área de trabalho. Ele mostra se o PC está pronto para torneios (Secure Boot, TPM, IOMMU) e as configurações do jogo que mais aliviam a CPU no endgame.
+**Tutorial completo: [docs/TUTORIAL-pt-PT.md](docs/TUTORIAL-pt-PT.md)**
+
+1. Transfere o **AME Wizard** em [ameliorated.io](https://ameliorated.io) e o `MuulfzOSFN-*.apbx` em [Releases](../../releases).
+2. **No Windows que já tens:** arrasta o `.apbx` para o AME e segue o assistente. É criado um ponto de restauro antes.
+3. **Instalação de raiz (recomendado):** grava a ISO oficial do Windows 11 numa pen USB com o [Rufus](https://rufus.ie) (sem conta Microsoft, sem BitLocker) e instala, criando a tua conta. Depois corre o AME com o `.apbx`.
+4. No fim, abre **"Fortnite - MuulfzOSFN.txt"** na área de trabalho. Mostra se o PC está pronto para torneios e as definições do jogo que mais aliviam a CPU no fim da partida.
 
 ## What it changes
 
