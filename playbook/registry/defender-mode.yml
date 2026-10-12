@@ -43,7 +43,6 @@ actions:
       # Jan 2026 WU re-adds DisableAntiSpyware under Policies on gpupdate; re-apply after (revitool workaround).
       & gpupdate.exe /target:computer /force *> $null
       Set-ItemProperty $P DisableAntiSpyware 1 -Type DWord
-      & gpupdate.exe /target:computer /force *> $null
       foreach ($s in 'WinDefend','WdNisSvc','Sense','WdFilter','WdBoot','WdNisDrv','SecurityHealthService','wscsvc','MDCoreSvc') {
         Set-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\$s" Start 4 -Type DWord -ErrorAction SilentlyContinue
       }
@@ -74,7 +73,6 @@ actions:
       Set-ItemProperty $RT DisableBehaviorMonitoring 1 -Type DWord
       & gpupdate.exe /target:computer /force *> $null
       Set-ItemProperty $P DisableAntiSpyware 1 -Type DWord
-      & gpupdate.exe /target:computer /force *> $null
       foreach ($s in 'WinDefend','WdNisSvc','Sense','WdFilter','WdBoot','WdNisDrv','SecurityHealthService','wscsvc','MDCoreSvc') {
         Set-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\$s" Start 4 -Type DWord -ErrorAction SilentlyContinue
       }
