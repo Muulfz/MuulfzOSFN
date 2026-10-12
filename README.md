@@ -7,7 +7,7 @@ and keeps everything Easy Anti-Cheat and Fortnite tournaments require.</p>
 
 <p align="center"><img src="docs/wallpaper-preview.jpg" width="720" alt="MuulfzOS wallpaper"></p>
 
-> **Status: 0.9.1 beta.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
+> **Status: 0.9.2 beta.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
 > the anti-cheat invariants pass. It has not been verified on bare metal with Fortnite yet,
 > because Easy Anti-Cheat refuses to run in a VM. Reports from real PCs are welcome.
 
@@ -29,8 +29,9 @@ and keeps everything Easy Anti-Cheat and Fortnite tournaments require.</p>
 | **Network** | **NIC power saving off** (EEE, Green Ethernet, etc.), re-applied at every boot because driver updates reset it. **Receive buffers set to the driver maximum.** **Wi-Fi off while Ethernet is connected.** Delivery Optimization uses **HTTP only** (no P2P uploads). Fortnite's UDP traffic is **tagged DSCP 46** for routers that honour QoS. |
 | **Background quiet** | **Telemetry off:** DiagTrack, policy, and about 14 telemetry/CEIP tasks. **No Windows Update restarts between 10:00 and 04:00.** **Outlook, Dev Home and Teams don't reinstall themselves.** No "Let's finish setting up" screens or suggestion toasts. **No OEM bloat:** firmware-injected installers (WPBT) and auto-installed mouse/monitor companion apps are blocked. **Quieter idle:** maintenance doesn't wake the PC, Game Bar's presence writer is off, and Edge startup boost is off. |
 | **Debloat** | **AI:** Copilot, Recall, Click to Do, AI Hub, Writing Assistant, Edge Game Assist, and the AI in Paint, Notepad, Edge and Settings. **Bing, news and Widgets:** Bing Search/News/Weather and Widgets. **Office and productivity:** Outlook, Teams, To Do, Power Automate, Office Hub, Clipchamp. **Other apps:** Dev Home, Family, Quick Assist, Phone Link, Feedback Hub, Solitaire, Tips, Get Help, Sticky Notes, Alarms, Camera app, Sound Recorder. **OneDrive** is removed. **Kept:** Microsoft Store, Xbox app, Game Bar, Edge (WebView2). |
-| **Optional** (off by default) | **Group services into fewer processes:** audio, network and Xbox stay separate. **Memory compression off:** 16 GB+ only. **Fault Tolerant Heap off.** |
-| **Extras** (options) | **Epic Games Launcher**, official installer. **MuulfzOS wallpaper and lock screen.** **Setup notes on the desktop:** tournament readiness, third-party network filters found, and in-game settings. |
+| **Optional** (off by default) | **Group services into fewer processes:** audio, network and Xbox stay separate. **Memory compression off:** 16 GB+ only. **Fault Tolerant Heap off.** **Disable Spectre/Meltdown mitigations:** advanced, lowers security (0-3% on modern CPUs, more on old ones). |
+| **Defender** (choose on its page) | **Keep and tune (default):** Defender stays on, scheduled scans run at low CPU priority and never mid-match. **Disable** or **Remove** are advanced choices that need Tamper Protection turned off first; they lower security but do not break Fortnite's anti-cheat (tournaments need Secure Boot/TPM/IOMMU, not Defender). |
+| **Extras** (options) | **Epic Games Launcher**, official installer. **Visual C++ runtimes**, official. **MuulfzOS wallpaper and lock screen.** **Setup notes on the desktop:** tournament readiness, a RAM/EXPO warning, third-party network filters found, and in-game settings. |
 
 ## What it keeps (anti-cheat and tournaments)
 
@@ -38,13 +39,17 @@ Since 2026-02-19, Fortnite PC tournaments require **Secure Boot + TPM 2.0 + IOMM
 never touches any of these:
 
 - Secure Boot, TPM/TBS and Measured Boot logs
-- Windows Defender real-time protection, and the Microsoft Store
 - Driver signature enforcement and the Vulnerable Driver Blocklist
-- DEP, ASLR and the default exploit mitigations
 - Windows Update itself
+- The Microsoft Store
 - Game Bar (dual-CCD Ryzen X3D needs it to pick the right cores)
 
-Kernel shadow stacks are turned off, because they break EAC (error 1275).
+**On by default, but you can change them on their own pages (advanced, lowers security):**
+
+- **Windows Defender** — on and tuned for gaming by default; the Defender page can disable or remove it.
+- **Spectre/Meltdown and other CPU mitigations** — on by default; an opt-in turns them off. DEP, ASLR and the rest stay on unless you pick this.
+
+Turning Defender or the mitigations off does **not** break Fortnite's anti-cheat (tournaments check Secure Boot/TPM/IOMMU, not these), but it does lower your PC's security. Kernel shadow stacks are turned off, because they break EAC (error 1275).
 
 ## What it does not do, and why
 
@@ -55,7 +60,7 @@ These are popular tweaks that are left out on purpose: they are placebo, or they
 - **`Win32PrioritySeparation`, MMCSS "Games" keys, `SystemResponsiveness`:** they give the same behaviour as the client default, or only affect audio threads.
 - **Mouse/keyboard queue size:** with 4-8 kHz mice a smaller queue risks dropped input.
 - **`NetworkThrottlingIndex`, packet coalescing, forcing RSS, interrupt moderation off:** placebo at Fortnite's packet rates. `NetworkThrottlingIndex=0xFFFFFFFF` can even lengthen network DPCs.
-- **Disabling Defender, mitigations, SmartScreen, Teredo/IPv6, the TRIM task or Windows Update:** these break anti-cheat, security, Xbox party or SSD health.
+- **Disabling Teredo/IPv6, the TRIM task or Windows Update; Device Manager device disables; `useplatformtick`/`disabledynamictick` timer flags:** these break Xbox party, SSD health or stability, or are placebo. (Defender and the CPU mitigations are left on by default too, but are offered as explicit opt-in pages for advanced users.)
 
 **About endgame stutter:** when 50 players fight in a small area, the CPU spike comes from the game itself, which has to simulate and draw all of them. Handling the extra network packets is a tiny part of it. In the VM stress test, the Windows network stack used under 1% CPU at a heavy endgame's ~600 packets/s. The biggest lever left is the in-game settings below.
 
@@ -100,7 +105,13 @@ These figures don't capture what counts most in a match: real FPS, 1% lows and n
 | Performance | Group services into fewer processes | ☐ |
 | | Memory compression off (16 GB+ RAM) | ☐ |
 | | Fault Tolerant Heap off | ☐ |
+| | Disable Spectre/Meltdown mitigations (advanced, lowers security) | ☐ |
+| Ryzen X3D | Pin Fortnite to the V-Cache CCD (dual-CCD X3D only; no effect elsewhere) | ☐ |
+| Defender | Keep Defender on, tune scans for gaming | ✅ (default) |
+| | Disable Defender (needs Tamper Protection off first) | ☐ |
+| | Remove Defender as far as a live apply can (needs Tamper Protection off) | ☐ |
 | Software and look | Install Epic Games Launcher | ✅ |
+| | Install Visual C++ runtimes (official) | ☐ |
 | | MuulfzOS wallpaper and lock screen | ✅ |
 
 ## Install

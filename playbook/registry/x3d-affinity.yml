@@ -1,0 +1,53 @@
+title: Dual-CCD Ryzen X3D -- pin Fortnite to the V-Cache CCD (opt-in)
+# A periodic scheduled task (no driver, no resident process, no WMI subscription,
+# no audit-policy change) that, once a minute, pins FortniteClient-Win64-Shipping
+# to the first half of the logical CPUs = CCD0, which carries the 3D V-Cache on
+# 7900X3D/7950X3D/9900X3D/9950X3D. Games that fit in the V-Cache run best there.
+#
+# Runtime-guarded to dual-CCD X3D only (name matches X3D and >=12 cores); a no-op
+# on every other CPU, so it is harmless if ticked by mistake. Idempotent: only
+# writes affinity when it differs, and logs to ProgramData\MuulfzOTMZ.
+#
+# EAC note: setting affinity opens the game with PROCESS_SET_INFORMATION. If EAC
+# blocks it the script logs the failure and does nothing -- the Game Bar + AMD
+# chipset driver path (the x3d-balanced option) stays the safe fallback.
+actions:
+  - !status
+    status: 'Installing the Ryzen X3D affinity helper...'
+  - !powerShell
+    command: |
+      $dir = Join-Path $env:ProgramData 'MuulfzOTMZ'
+      New-Item -ItemType Directory -Force $dir | Out-Null
+      $file = Join-Path $dir 'x3d-affinity.ps1'
+      $script = @'
+      $ErrorActionPreference = 'SilentlyContinue'
+      $log = Join-Path $env:ProgramData 'MuulfzOTMZ\x3d-affinity.log'
+      function Log($m) { try { "$(Get-Date -Format s)  $m" | Add-Content -LiteralPath $log } catch {} }
+      $cpu = @(Get-CimInstance Win32_Processor)[0]
+      $name = "$($cpu.Name)"; $cores = [int]$cpu.NumberOfCores; $lp = [int]$cpu.NumberOfLogicalProcessors
+      # Dual-CCD X3D only (7900X3D/9900X3D = 12 cores, 7950X3D/9950X3D = 16). The V-Cache
+      # die is CCD0 on these parts, i.e. the first half of the logical processors.
+      if ($name -notmatch 'X3D' -or $cores -lt 12) { return }
+      $half = [math]::Floor($lp / 2)
+      $mask = [int64]([math]::Pow(2, $half) - 1)
+      foreach ($p in @(Get-Process FortniteClient-Win64-Shipping)) {
+        try {
+          if ([int64]$p.ProcessorAffinity -ne $mask) {
+            $p.ProcessorAffinity = [IntPtr]$mask
+            Log ("pinned PID {0} to CCD0 mask 0x{1:X} ({2}, {3}c/{4}t)" -f $p.Id, $mask, $name, $cores, $lp)
+          }
+        } catch { Log "pin failed PID $($p.Id): $($_.Exception.Message)" }
+      }
+      '@
+      Set-Content -LiteralPath $file -Value $script -Encoding UTF8
+      & $file
+      $act = New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$file`""
+      # At logon, then re-check every minute so a later game launch still gets pinned.
+      $trg = New-ScheduledTaskTrigger -AtLogOn
+      $rep = (New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration ([TimeSpan]::MaxValue)).Repetition
+      $trg.Repetition = $rep
+      $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
+      Register-ScheduledTask -TaskPath '\MuulfzOTMZ\' -TaskName 'Fortnite X3D affinity' -Action $act -Trigger $trg -Settings $set -User SYSTEM -RunLevel Highest -Force | Out-Null
+      exit 0
+    option: x3d-affinity
+    _tags: [mode:any, tier:aggressive]

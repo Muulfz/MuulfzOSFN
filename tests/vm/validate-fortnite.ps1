@@ -9,7 +9,9 @@
     -ArgumentList $true, $true, $false, $false, $true | Format-Table Kind, Check, Expected, Actual, Pass
 #>
 param([bool] $VbsOff = $true, [bool] $HighPriority = $true, [bool] $X3dBalanced = $false, [bool] $WuNoDrivers = $false, [bool] $InstallEpic = $true,
-      [bool] $SvcGroup = $false, [bool] $MemCompOff = $false, [bool] $FthOff = $false, [bool] $Wallpaper = $true)
+      [bool] $SvcGroup = $false, [bool] $MemCompOff = $false, [bool] $FthOff = $false, [bool] $Wallpaper = $true,
+      [ValidateSet('keep','disable','remove')] [string] $DefenderMode = 'keep', [bool] $SpectreOff = $false, [bool] $InstallRuntimes = $false,
+      [bool] $X3dAffinity = $false)
 $ErrorActionPreference = 'Stop'   # a failing cmdlet must read as ERR, never as a vacuous PASS
 
 function Reg($path, $name) { (Get-ItemProperty "Registry::$path" -Name $name -ErrorAction SilentlyContinue).$name }
@@ -74,7 +76,28 @@ Check tweak 'OneDrive sync blocked'          1 { Reg 'HKLM\SOFTWARE\Policies\Mic
 # The policy alone passed while the uninstall script had silently failed (run 1) -- check the binary.
 Check tweak 'OneDrive uninstalled (user)'    $false { Test-Path "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDrive.exe" }
 # v5: only the folder Epic suggests -- no store-wide folders, no launcher process names.
-Check tweak 'Defender exclusions'            'C:\Program Files\Epic Games\Fortnite' { $m = Get-MpPreference; (@($m.ExclusionPath) + @($m.ExclusionProcess) | Where-Object { $_ }) -join ' | ' }
+# Only meaningful when Defender is kept; disable/remove tear Get-MpPreference down.
+if ($DefenderMode -eq 'keep') {
+    Check tweak 'Defender exclusions'        'C:\Program Files\Epic Games\Fortnite' { $m = Get-MpPreference; (@($m.ExclusionPath) + @($m.ExclusionProcess) | Where-Object { $_ }) -join ' | ' }
+}
+# --- v0.9.2 Defender mode (registry/defender-mode.yml) -----------------------
+$defPol = 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender'
+if ($DefenderMode -eq 'keep') {
+    Check tweak 'Defender scan low CPU priority' 1 { Reg "$defPol\Scan" LowCpuPriority }
+    Check tweak 'Defender scheduled scan off'    8 { Reg "$defPol\Scan" ScheduleDay }
+} else {
+    # disable/remove only land if Tamper Protection was off; otherwise the task no-ops by design.
+    Check tweak 'Defender DisableAntiSpyware'    1 { Reg $defPol DisableAntiSpyware }
+    Check tweak 'WinDefend service disabled/gone' $true {
+        $s = Reg 'HKLM\SYSTEM\CurrentControlSet\Services\WinDefend' Start; ($null -eq $s) -or ($s -eq 4) }
+    Check info  'Tamper Protection (must be off to apply)' '' { (Get-MpComputerStatus -ErrorAction SilentlyContinue).IsTamperProtected }
+}
+if ($DefenderMode -eq 'remove') {
+    Check tweak 'SmartScreen policy off'         0 { Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System' EnableSmartScreen }
+}
+if ($InstallRuntimes) {
+    Check tweak 'VC++ runtime installed' $true { [bool](Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object DisplayName -match 'Visual C\+\+ 20\d\d') }
+}
 # --- v5 background quiet (registry/fortnite-qol.yml, appx/ai-26h2.yml) -------
 $wu = 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate'
 Check tweak 'WU active hours 10-04'          '1 10 4' { '{0} {1} {2}' -f (Reg $wu SetActiveHours), (Reg $wu ActiveHoursStart), (Reg $wu ActiveHoursEnd) }
@@ -96,7 +119,14 @@ Check tweak 'Kept split: audio/net/Xbox'     '' { (@('Audiosrv', 'AudioEndpointB
 $bigRam = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory -ge 15GB
 Check tweak 'Memory compression'             $(-not ($MemCompOff -and $bigRam)) { (Get-MMAgent).MemoryCompression }
 Check tweak 'FTH off'                        $FthOff { (Reg 'HKLM\SOFTWARE\Microsoft\FTH' Enabled) -eq 0 }
+Check tweak 'Spectre/Meltdown mitigations off' $(if ($SpectreOff) { 33554435 } else { '' }) {
+    Reg 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management' FeatureSettingsOverride }
 Check info  'svchost processes'              '' { @(Get-Process svchost).Count }
+if ($X3dAffinity) {
+    Check tweak 'X3D affinity helper installed' $true {
+        [bool](Get-ScheduledTask -TaskPath '\MuulfzOTMZ\' -TaskName 'Fortnite X3D affinity' -ErrorAction SilentlyContinue) -and
+        (Test-Path "$env:ProgramData\MuulfzOTMZ\x3d-affinity.ps1") }
+}
 $wp = 'C:\Windows\Web\Wallpaper\MuulfzOS\wallpaper.jpg'
 Check tweak 'MuulfzOS wallpaper'             $Wallpaper { (Test-Path $wp) -and (Reg 'HKCU\Control Panel\Desktop' Wallpaper) -eq $wp }
 Check tweak 'MuulfzOS lock screen'           $Wallpaper { (Reg 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP' LockScreenImagePath) -eq $wp }
@@ -113,7 +143,11 @@ Check invariant 'TPM ready'                  $true { (Get-Tpm).TpmReady }
 # 26H2 may ship no TBS service (only the TPM driver) -- a missing key is fine, Start=4 is not.
 Check invariant 'TPM/TBS not disabled'       $true { -not (@(@('TPM', 'TBS') | ForEach-Object { Reg "HKLM\SYSTEM\CurrentControlSet\Services\$_" Start }) -contains 4) }
 Check invariant 'MeasuredBoot logs present'  $true { [bool](Get-ChildItem C:\Windows\Logs\MeasuredBoot -Filter *.log -ErrorAction Stop) }
-Check invariant 'Defender real-time on'      $true { (Get-MpComputerStatus).RealTimeProtectionEnabled }
+if ($DefenderMode -eq 'keep') {
+    Check invariant 'Defender real-time on'  $true { (Get-MpComputerStatus).RealTimeProtectionEnabled }
+} else {
+    Check tweak 'Defender real-time off (mode)' $true { -not (Get-MpComputerStatus -ErrorAction SilentlyContinue).RealTimeProtectionEnabled }
+}
 Check invariant 'VulnerableDriverBlocklist'  1 { Reg 'HKLM\SYSTEM\CurrentControlSet\Control\CI\Config' VulnerableDriverBlocklistEnable }
 Check invariant 'No testsigning/debug/DSE-off' $false { Bcd '(?im)^(testsigning|nointegritychecks|debug)\s+(Yes|Sim|On)' }
 Check invariant 'DEP nx OptIn'               $true { Bcd '(?im)^nx\s+OptIn' }

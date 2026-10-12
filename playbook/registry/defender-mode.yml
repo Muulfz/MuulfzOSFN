@@ -1,0 +1,87 @@
+title: Defender mode (wizard page) -- keep & tune, disable, or remove
+# RadioPage defender-mode in playbook-fortnite.conf. Default = defender-keep.
+#
+# Fortnite tournaments need Secure Boot + TPM + IOMMU, NOT Defender, so turning
+# Defender off does not trip EAC/BattlEye -- it only lowers your PC's security.
+# The playbook keeps Defender ON by default on purpose.
+#
+# Tamper Protection: disable/remove rewrite HKLM\...\Services\WinDefend and the
+# live Defender config, which Tamper Protection blocks even for TrustedInstaller
+# (and since Jan 2026 gpupdate re-adds the policy value). So those two tiers
+# detect Tamper Protection and, if it is still ON, skip and drop a desktop note
+# telling the user to turn it off (Windows Security > Virus & threat protection >
+# Manage settings > Tamper Protection) and re-run. Policy keys under
+# Policies\...\Windows Defender are not tamper-guarded and always apply.
+actions:
+  - !status
+    status: 'Applying Defender mode...'
+
+  # --- Tier 1: keep Defender, just make scans game-friendly (default) ---------
+  # Real-time protection stays ON. Only tunes scheduled scans: low CPU priority,
+  # capped CPU load, and no scheduled full scan (so a scan never lands mid-match).
+  # All under the GPO policy hive, honored with Tamper Protection on.
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Scan', value: LowCpuPriority, type: REG_DWORD, data: '1', option: defender-keep, _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Scan', value: AvgCPULoadFactor, type: REG_DWORD, data: '20', option: defender-keep, _tags: [mode:any, tier:safe]}
+  - !registryValue {path: 'HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Scan', value: ScheduleDay, type: REG_DWORD, data: '8', option: defender-keep, _tags: [mode:any, tier:safe]}
+
+  # --- Tier 2: disable Defender (advanced, Tamper Protection must be off) ------
+  - !powerShell
+    command: |
+      $note = "$env:PUBLIC\Desktop\Fortnite - MuulfzOSFN.txt"
+      $st = try { Get-MpComputerStatus -ErrorAction Stop } catch { $null }
+      if ($st -and $st.IsTamperProtected) {
+        Add-Content $note "`r`nDefender NOT disabled: Tamper Protection is ON. Turn it off in Windows Security > Virus & threat protection > Manage settings > Tamper Protection, then re-run MuulfzOSFN and pick Disable Defender again." -Encoding utf8 -ErrorAction SilentlyContinue
+        exit 0
+      }
+      $P = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender'
+      New-Item $P -Force | Out-Null
+      Set-ItemProperty $P DisableAntiSpyware 1 -Type DWord
+      Set-ItemProperty $P DisableAntiVirus 1 -Type DWord
+      $RT = "$P\Real-Time Protection"; New-Item $RT -Force | Out-Null
+      Set-ItemProperty $RT DisableRealtimeMonitoring 1 -Type DWord
+      Set-ItemProperty $RT DisableBehaviorMonitoring 1 -Type DWord
+      # Jan 2026 WU re-adds DisableAntiSpyware under Policies on gpupdate; re-apply after (revitool workaround).
+      & gpupdate.exe /target:computer /force *> $null
+      Set-ItemProperty $P DisableAntiSpyware 1 -Type DWord
+      & gpupdate.exe /target:computer /force *> $null
+      foreach ($s in 'WinDefend','WdNisSvc','Sense','WdFilter','WdBoot','WdNisDrv','SecurityHealthService','wscsvc','MDCoreSvc') {
+        Set-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\$s" Start 4 -Type DWord -ErrorAction SilentlyContinue
+      }
+      Remove-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' SecurityHealth -ErrorAction SilentlyContinue
+      exit 0
+    option: defender-disable
+    _tags: [mode:any, tier:aggressive]
+
+  # --- Tier 3: remove as much as a live playbook can (advanced, TP off) --------
+  # Everything in Tier 2 plus: delete the WinDefend service key and turn off
+  # SmartScreen. NOTE: this is not the full package removal AME does via its
+  # signed NoDefender cab + Safe Mode; for that, build an ISO with AME's
+  # DefenderDisabled requirement. This is the strongest reversible live-apply tier.
+  - !powerShell
+    command: |
+      $note = "$env:PUBLIC\Desktop\Fortnite - MuulfzOSFN.txt"
+      $st = try { Get-MpComputerStatus -ErrorAction Stop } catch { $null }
+      if ($st -and $st.IsTamperProtected) {
+        Add-Content $note "`r`nDefender NOT removed: Tamper Protection is ON. Turn it off in Windows Security > Virus & threat protection > Manage settings > Tamper Protection, then re-run MuulfzOSFN and pick Remove Defender again." -Encoding utf8 -ErrorAction SilentlyContinue
+        exit 0
+      }
+      $P = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender'
+      New-Item $P -Force | Out-Null
+      Set-ItemProperty $P DisableAntiSpyware 1 -Type DWord
+      Set-ItemProperty $P DisableAntiVirus 1 -Type DWord
+      $RT = "$P\Real-Time Protection"; New-Item $RT -Force | Out-Null
+      Set-ItemProperty $RT DisableRealtimeMonitoring 1 -Type DWord
+      Set-ItemProperty $RT DisableBehaviorMonitoring 1 -Type DWord
+      & gpupdate.exe /target:computer /force *> $null
+      Set-ItemProperty $P DisableAntiSpyware 1 -Type DWord
+      & gpupdate.exe /target:computer /force *> $null
+      foreach ($s in 'WinDefend','WdNisSvc','Sense','WdFilter','WdBoot','WdNisDrv','SecurityHealthService','wscsvc','MDCoreSvc') {
+        Set-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\$s" Start 4 -Type DWord -ErrorAction SilentlyContinue
+      }
+      Remove-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' SecurityHealth -ErrorAction SilentlyContinue
+      Remove-Item 'HKLM:\SYSTEM\CurrentControlSet\Services\WinDefend' -Recurse -Force -ErrorAction SilentlyContinue
+      New-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Force | Out-Null
+      Set-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' EnableSmartScreen 0 -Type DWord
+      exit 0
+    option: defender-remove
+    _tags: [mode:any, tier:aggressive]

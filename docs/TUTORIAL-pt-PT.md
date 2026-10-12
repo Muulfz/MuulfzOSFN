@@ -2,16 +2,18 @@
 
 O MuulfzOS é um *playbook* para o [AME Wizard](https://ameliorated.io) que otimiza o Windows 11
 para Fortnite competitivo. Os ajustes **não mexem em nada que o anti-cheat ou os torneios
-exigem**: Secure Boot, TPM, IOMMU, Defender e assinatura de drivers ficam intactos.
+exigem**: Secure Boot, TPM, IOMMU e assinatura de drivers ficam intactos. O Defender fica
+**ligado por omissão** (com os scans afinados para jogar); há uma página opcional avançada
+para o desligar ou remover, que baixa a segurança mas não afeta o anti-cheat do Fortnite.
 
-> **Versão 0.9.1 (beta).** Testada em máquinas virtuais com o Windows 11 25H2 e 26H2. Ainda
+> **Versão 0.9.2 (beta).** Testada em máquinas virtuais com o Windows 11 25H2 e 26H2. Ainda
 > falta confirmação em PCs reais a jogar Fortnite, por isso conta-nos como correu.
 
 ## Do que precisas
 
 - PC com **Windows 11 24H2, 25H2 ou 26H2** (64 bits)
 - **Ligação à Internet**, para o Windows Update e o Epic Games Launcher
-- O ficheiro **`MuulfzOSFN-0.9.1.apbx`**, a transferir em [Releases](https://github.com/Muulfz/MuulfzOSFN/releases)
+- O ficheiro **`MuulfzOSFN-0.9.2.apbx`**, a transferir em [Releases](https://github.com/Muulfz/MuulfzOSFN/releases)
 - O **AME Wizard**, a transferir em [ameliorated.io](https://ameliorated.io)
 - Para uma instalação de raiz: uma **pen USB de 16 GB ou mais** (vai ser apagada) e o [Rufus](https://rufus.ie)
 
@@ -23,7 +25,7 @@ Há duas formas de instalar. A **instalação de raiz** (opção B) dá o melhor
 
 1. Instala todas as atualizações no **Windows Update** e reinicia. O AME recusa avançar se houver atualizações pendentes.
 2. Abre o **AME Wizard**.
-3. Arrasta o `MuulfzOSFN-0.9.1.apbx` para a janela, ou clica em **Use Existing** e escolhe o ficheiro.
+3. Arrasta o `MuulfzOSFN-0.9.2.apbx` para a janela, ou clica em **Use Existing** e escolhe o ficheiro.
 4. Segue as páginas e escolhe as opções (vê a secção [Opções do assistente](#opções-do-assistente)).
 5. O AME cria um **ponto de restauro**, aplica tudo (cerca de 10 minutos) e reinicia sozinho.
 
@@ -58,7 +60,7 @@ Podes aplicar no Windows que já usas: **os teus ficheiros e os programas que in
    - ✅ *Disable BitLocker automatic device encryption*
    - ⬜ *Create a local account with username*: **deixa desmarcado**, para criares a tua conta durante a instalação.
    - ⬜ *Remove requirement for 4GB+ RAM, Secure Boot and TPM 2.0*: **deixa desmarcado**, porque os torneios exigem estas três coisas.
-4. Quando o Rufus terminar, copia para a pen USB o **AME Wizard** e o **`MuulfzOSFN-0.9.1.apbx`**.
+4. Quando o Rufus terminar, copia para a pen USB o **AME Wizard** e o **`MuulfzOSFN-0.9.2.apbx`**.
 
 ### 2. Configurar a BIOS
 
@@ -79,7 +81,7 @@ Depois, arranca a partir da pen USB em modo **UEFI**.
 ### 4. Aplicar o MuulfzOS
 
 1. Na pen USB, abre o **AME Wizard**.
-2. Clica em **Use Existing** e escolhe o `MuulfzOSFN-0.9.1.apbx`.
+2. Clica em **Use Existing** e escolhe o `MuulfzOSFN-0.9.2.apbx`.
 3. Segue as páginas, escolhe as opções e confirma. O PC reinicia sozinho no fim.
 
 ---
@@ -95,8 +97,20 @@ Depois, arranca a partir da pen USB em modo **UEFI**.
 | Performance | Agrupar serviços em menos processos | ⬜ | Opcional: menos processos em segundo plano. |
 | | Desligar a compressão de memória (16 GB+) | ⬜ | Opcional. Só atua com 16 GB ou mais de RAM. |
 | | Desligar o Fault Tolerant Heap | ⬜ | Opcional. |
+| | Desligar as mitigações Spectre/Meltdown | ⬜ | **Avançado.** 0 a 3% em CPUs recentes, mais em antigos. Tira uma camada de segurança do kernel. Não afeta o anti-cheat. |
+| Ryzen X3D | Fixar o Fortnite ao CCD com cache 3D | ⬜ | **Marca só se tens um 7900/7950/9900/9950X3D (2 CCDs).** Uma tarefa fixa o jogo aos núcleos com V-Cache. Sem efeito noutros CPUs. |
+| Defender | Manter o Defender e afinar os scans | ✅ | Recomendado. O Defender continua ligado; os scans agendados correm em baixa prioridade e nunca a meio da partida. |
+| | Desligar o Defender | ⬜ | **Avançado.** Tens de desligar o Tamper Protection primeiro (ver abaixo). Baixa a segurança; não afeta os torneios. |
+| | Remover o Defender ao máximo possível | ⬜ | **Avançado.** Igual, com Tamper Protection desligado. Remoção total mesmo só na ISO. |
 | Software e aspeto | Instalar o Epic Games Launcher | ✅ | |
+| | Instalar os runtimes Visual C++ (oficiais) | ⬜ | Opcional. O Fortnite traz os seus; útil para outros jogos/launchers. Precisa de Internet. |
 | | Fundo de ecrã e ecrã de bloqueio MuulfzOS | ✅ | Desmarca se preferires o teu fundo. |
+
+> **Desligar/remover o Defender — Tamper Protection.** O Windows protege as definições do
+> Defender com o *Tamper Protection*. Antes de aplicar com uma destas opções, desliga-o em
+> *Segurança do Windows → Proteção contra vírus e ameaças → Gerir definições → Proteção
+> contra manipulação*. Se estiver ligado, o playbook não desliga o Defender e deixa um aviso
+> no ficheiro da área de trabalho a pedir para o desligares e voltares a correr.
 
 ## Depois de instalar
 
@@ -113,7 +127,7 @@ Na área de trabalho aparece o ficheiro **"Fortnite - MuulfzOSFN.txt"**. Mostra 
 
 ## Perguntas frequentes
 
-**Posso ser banido?** O MuulfzOS não toca no jogo nem no anti-cheat. Só muda definições do Windows e mantém tudo o que o Easy Anti-Cheat verifica.
+**Posso ser banido?** O MuulfzOS não toca no jogo nem no anti-cheat. Só muda definições do Windows e mantém tudo o que o Easy Anti-Cheat verifica. As opções avançadas (desligar o Defender ou as mitigações) também não são verificadas pelo anti-cheat — só baixam a segurança do PC.
 
 **Funciona em portáteis?** Sim. Em portáteis o plano de energia fica em Equilibrado e os ajustes só para desktop (hibernação, poupança de energia USB/PCIe) não são aplicados.
 

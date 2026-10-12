@@ -32,6 +32,24 @@ actions:
     option: install-epic
     _tags: [mode:any, tier:safe]
 
+  # Visual C++ runtimes (official MS redists, x64 + x86). Fortnite ships its own,
+  # but older games / launchers expect them present. Opt-in, needs internet,
+  # non-fatal on failure. (DirectX 11/12 is built into Windows -> not installed.)
+  - !powerShell
+    command: |
+      $ProgressPreference = 'SilentlyContinue'
+      foreach ($u in 'https://aka.ms/vs/17/release/vc_redist.x64.exe', 'https://aka.ms/vs/17/release/vc_redist.x86.exe') {
+        $f = Join-Path $env:TEMP (Split-Path $u -Leaf)
+        try {
+          Invoke-WebRequest $u -OutFile $f -UseBasicParsing
+          Start-Process $f -ArgumentList '/install', '/quiet', '/norestart' -Wait
+        } catch { Write-Warning "runtime $u : $_" }
+        Remove-Item $f -Force -ErrorAction SilentlyContinue
+      }
+      exit 0
+    option: install-runtimes
+    _tags: [mode:any, tier:safe]
+
   # The only exclusion Epic suggests (help article a202300000010815). No launcher
   # process / store-wide folders: MS lists program folders and bare process names
   # among exclusions to avoid, and they were never measured to help.
@@ -72,8 +90,19 @@ actions:
       $filters = @(Get-NetAdapterBinding -ErrorAction SilentlyContinue | Where-Object { $_.Enabled -and $_.ComponentID -notlike 'ms_*' -and $_.ComponentID -notlike 'vms_*' } |
                    ForEach-Object { '  ' + $_.Name + ': ' + $_.DisplayName } | Sort-Object -Unique)
       if (-not $filters) { $filters = @('  none') }
+      # RAM speed: DDR5 defaults to 4800 (or lower) and DDR4 to 2666 until EXPO/XMP/DOCP
+      # is enabled in BIOS. Running under-clocked RAM is the single biggest unused win
+      # for Fortnite 1% lows, so flag it. SMBIOSMemoryType 34 = DDR5, 26/24 = DDR4.
+      $mem = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue | Select-Object -First 1
+      $spd = [int]$mem.ConfiguredClockSpeed; $type = [int]$mem.SMBIOSMemoryType
+      $ddr = if ($type -eq 34) { 'DDR5' } elseif ($type -in 24, 26) { 'DDR4' } else { "type $type" }
+      $ram = if ($spd -le 0) { @('  could not read memory speed') }
+        elseif ($type -eq 34 -and $spd -le 4800) { @("  $ddr at $spd MHz -> EXPO/XMP likely OFF. Enable EXPO (AMD) / XMP (Intel) in BIOS: biggest endgame 1% low gain.") }
+        elseif ($type -in 24, 26 -and $spd -le 2666) { @("  $ddr at $spd MHz -> XMP/DOCP likely OFF. Enable it in BIOS.") }
+        else { @("  $ddr at $spd MHz - OK") }
       @('MuulfzOSFN - Fortnite setup notes', '',
         'Tournament readiness (Secure Boot + TPM 2.0 + IOMMU, required by Epic since Feb 2026):') + $missing + @('',
+        'Memory (RAM):') + $ram + @('',
         'Third-party filters on your network adapters (each inspects every packet; remove what you do not need):') + $filters + @('',
         'In-game settings that cut endgame CPU load (Epic 2026 guide, NVIDIA):',
         '  Rendering Mode: Performance',

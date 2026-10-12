@@ -42,3 +42,10 @@ actions:
   # (Atlas disable-fth.yml default, PC-Tuning).
   - !run {exe: 'rundll32.exe', args: 'fthsvc.dll,FthSysprepSpecialize', option: fth-off, _tags: [mode:any, tier:aggressive]}
   - !registryValue {path: 'HKLM\SOFTWARE\Microsoft\FTH', value: Enabled, type: REG_DWORD, data: '0', option: fth-off, _tags: [mode:any, tier:aggressive]}
+
+  # Disable Spectre/Meltdown + related speculative-execution mitigations (0x2000003).
+  # Off by default: public game benchmarks show 0-3% on Ryzen 3000+/Intel 10th gen+,
+  # more on older CPUs, in exchange for a kernel security layer. Opt-in only.
+  # 33554435 = 0x2000003 (disable Spectre/Meltdown + variants). AME REG_DWORD wants decimal.
+  - !registryValue {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: FeatureSettingsOverride, type: REG_DWORD, data: '33554435', option: spectre-off, _tags: [mode:any, tier:aggressive]}
+  - !registryValue {path: 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management', value: FeatureSettingsOverrideMask, type: REG_DWORD, data: '33554435', option: spectre-off, _tags: [mode:any, tier:aggressive]}

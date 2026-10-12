@@ -22,6 +22,8 @@ actions:
   - !include "registry/nic-gaming.yml"
   - !include "registry/fortnite-qol.yml"
   - !include "registry/performance-options.yml"
+  - !include "registry/x3d-affinity.yml"
+  - !include "registry/defender-mode.yml"
   - !include "registry/onedrive-removal.yml"
   - !include "services/disable.yml"
   - !include "appx/trim.yml"
