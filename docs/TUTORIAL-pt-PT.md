@@ -6,8 +6,10 @@ exigem**: Secure Boot, TPM, IOMMU e assinatura de drivers ficam intactos. O Defe
 **ligado por omissão** (com os scans afinados para jogar); há uma página opcional avançada
 para o desligar ou remover, que baixa a segurança mas não afeta o anti-cheat do Fortnite.
 
-> **Versão 0.9.2 (beta).** Testada em máquinas virtuais com o Windows 11 25H2 e 26H2. Ainda
-> falta confirmação em PCs reais a jogar Fortnite, por isso conta-nos como correu.
+> **Versão 0.9.2.** Funciona no Windows 11 24H2, 25H2 e 26H2. As predefinições (as opções já
+> marcadas) são as recomendadas e testadas. As opções marcadas como **Avançado** são extra e
+> para quem sabe o que está a fazer — não precisas delas para jogar bem. Problemas? [Abre uma
+> issue](https://github.com/Muulfz/MuulfzOSFN/issues).
 
 ## Do que precisas
 
@@ -17,7 +19,10 @@ para o desligar ou remover, que baixa a segurança mas não afeta o anti-cheat d
 - O **AME Wizard**, a transferir em [ameliorated.io](https://ameliorated.io)
 - Para uma instalação de raiz: uma **pen USB de 16 GB ou mais** (vai ser apagada) e o [Rufus](https://rufus.ie)
 
-Há duas formas de instalar. A **instalação de raiz** (opção B) dá o melhor resultado.
+Há duas formas de instalar — escolhe uma:
+
+- **Opção A — aplicar no Windows que já tens:** rápido, não reinstalas nada. Bom para experimentar.
+- **Opção B — instalação de raiz numa pen (recomendado):** reinstala o Windows do zero. Dá o resultado mais limpo e mais rápido.
 
 ---
 
@@ -87,6 +92,11 @@ Depois, arranca a partir da pen USB em modo **UEFI**.
 ---
 
 ## Opções do assistente
+
+**Para a maioria das pessoas, as predefinições já são as melhores: carrega em *seguinte* em
+cada página do assistente.** Só precisas de mexer se te encaixas numa das linhas abaixo. As
+opções marcadas **Avançado** baixam a segurança ou são para hardware específico — não
+precisas delas para jogar bem.
 
 | Página | Opção | Por omissão | Quando mudar |
 |---|---|---|---|

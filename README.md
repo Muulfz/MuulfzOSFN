@@ -7,7 +7,7 @@ and keeps everything Easy Anti-Cheat and Fortnite tournaments require.</p>
 
 <p align="center"><img src="docs/wallpaper-preview.jpg" width="720" alt="MuulfzOS wallpaper"></p>
 
-> **Status: 0.9.2 beta.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
+> **Status: 0.9.2.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
 > the anti-cheat invariants pass. It has not been verified on bare metal with Fortnite yet,
 > because Easy Anti-Cheat refuses to run in a VM. Reports from real PCs are welcome.
 
