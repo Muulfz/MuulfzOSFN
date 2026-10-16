@@ -32,6 +32,34 @@ actions:
     option: install-epic
     _tags: [mode:any, tier:safe]
 
+  # One-click "Install Fortnite" shortcut. Fortnite can't be pre-downloaded (it
+  # needs an Epic login we don't have), so this drops a desktop shortcut to the
+  # launcher's install URI. After the user signs in, one click starts the download.
+  # Tied to install-epic: pointless without the launcher and its protocol handler.
+  - !powerShell
+    command: |
+      $lnk = Join-Path $env:PUBLIC 'Desktop\Install Fortnite.url'
+      @('[InternetShortcut]', 'URL=com.epicgames.launcher://apps/Fortnite?action=install', 'IconIndex=0') |
+        Out-File $lnk -Encoding ascii -ErrorAction SilentlyContinue
+      exit 0
+    option: install-epic
+    _tags: [mode:any, tier:safe]
+
+  # Google Chrome (official per-machine enterprise MSI). Edge ships with Windows
+  # and is left in place; this only adds Chrome. Opt-in, needs internet, non-fatal.
+  - !powerShell
+    command: |
+      $msi = Join-Path $env:TEMP 'chrome_enterprise64.msi'
+      $ProgressPreference = 'SilentlyContinue'
+      try {
+        Invoke-WebRequest 'https://dl.google.com/tag/s/dl/chrome/install/googlechromestandaloneenterprise64.msi' -OutFile $msi -UseBasicParsing
+        Start-Process msiexec.exe -ArgumentList '/i', $msi, '/qn', '/norestart' -Wait
+      } catch { Write-Warning "Chrome install: $_" }
+      Remove-Item $msi -Force -ErrorAction SilentlyContinue
+      exit 0
+    option: install-chrome
+    _tags: [mode:any, tier:safe]
+
   # Visual C++ runtimes (official MS redists, x64 + x86). Fortnite ships its own,
   # but older games / launchers expect them present. Opt-in, needs internet,
   # non-fatal on failure. (DirectX 11/12 is built into Windows -> not installed.)

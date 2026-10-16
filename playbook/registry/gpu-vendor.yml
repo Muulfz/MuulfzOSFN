@@ -1,0 +1,89 @@
+title: GPU vendor app + optional aggressive GPU tweaks
+# Detect the GPU vendor and, opt-in, install the vendor app and/or apply
+# vendor tweaks.
+#
+# Reality of unattended install (checked 2026-10):
+#   NVIDIA App   -> only on the msstore source (id XP8CLZL93F5Z4P), not winget.
+#   AMD Adrenalin-> NOT on winget/msstore at all (only "AMD Software: Cloud
+#                   Edition", a different, remote-management product).
+#   Intel        -> not a silent-friendly package either.
+# So we winget-install where a package exists (NVIDIA, via Store) and degrade to
+# the official download link on the desktop notes everywhere else. The winget
+# attempt is time-boxed and fully non-fatal so it can never hang or fail the apply.
+#
+# NVIDIA telemetry off is the zero-risk baseline (privacy, no FPS claim). The
+# aggressive tweaks (ULPS off on AMD, force-max-performance PowerMizer on NVIDIA)
+# are disputed/unmeasured -- that is why they are a separate opt-in, off by default.
+actions:
+  - !status
+    status: 'GPU vendor setup...'
+
+  # Install the vendor app (where possible) + NVIDIA telemetry off. Non-fatal.
+  - !powerShell
+    command: |
+      $ProgressPreference = 'SilentlyContinue'
+      $names  = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | ForEach-Object { "$($_.Name) $($_.AdapterCompatibility)" }) -join ' | '
+      $vendor = if ($names -match 'NVIDIA') { 'NVIDIA' }
+                elseif ($names -match 'Radeon|Advanced Micro|\bAMD\b') { 'AMD' }
+                elseif ($names -match 'Intel') { 'Intel' }
+                else { 'Unknown' }
+      $note = @()
+
+      if ($vendor -eq 'NVIDIA') {
+        # Telemetry opt-out (known FTS RIDs) + disable the NvTmRep crash-report tasks.
+        New-Item -Path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global\FTS' -Force -ErrorAction SilentlyContinue | Out-Null
+        foreach ($rid in 'EnableRID66610', 'EnableRID71640', 'EnableRID44231') {
+          Set-ItemProperty 'HKLM:\SOFTWARE\NVIDIA Corporation\Global\FTS' -Name $rid -Type DWord -Value 0 -ErrorAction SilentlyContinue
+        }
+        Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -like 'NvTmRep*' -or $_.TaskName -like 'NvTmMon*' } |
+          Disable-ScheduledTask -ErrorAction SilentlyContinue | Out-Null
+      }
+
+      switch ($vendor) {
+        'NVIDIA' {
+          $wg = (Get-ChildItem "$env:ProgramFiles\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe\winget.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          if (-not $wg) { $wg = (Get-Command winget.exe -ErrorAction SilentlyContinue).Source }
+          if ($wg) {
+            $p = Start-Process $wg -ArgumentList 'install', '--id', 'XP8CLZL93F5Z4P', '--source', 'msstore', '--accept-package-agreements', '--accept-source-agreements', '--disable-interactivity', '--silent' -PassThru -WindowStyle Hidden
+            if (-not $p.WaitForExit(600000)) { try { $p.Kill() } catch {}; $note += 'NVIDIA App install timed out -> https://www.nvidia.com/en-us/software/nvidia-app/' }
+            elseif ($p.ExitCode -ne 0) { $note += "NVIDIA App did not install (winget exit $($p.ExitCode)) -> https://www.nvidia.com/en-us/software/nvidia-app/" }
+          } else {
+            $note += 'winget not available -> NVIDIA App: https://www.nvidia.com/en-us/software/nvidia-app/'
+          }
+        }
+        'AMD'   { $note += 'AMD Adrenalin is not on winget -> download the gaming driver: https://www.amd.com/en/support/download/drivers.html' }
+        'Intel' { $note += 'Intel graphics driver: https://www.intel.com/content/www/us/en/download-center/home.html' }
+        default { $note += 'GPU vendor not detected -> install your GPU driver manually.' }
+      }
+
+      if ($note) {
+        $f = "$env:PUBLIC\Desktop\Fortnite - MuulfzOSFN.txt"
+        ("", "GPU driver ($vendor):") + ($note | ForEach-Object { "  $_" }) | Out-File $f -Append -Encoding utf8 -ErrorAction SilentlyContinue
+      }
+      exit 0
+    option: install-gpu
+    _tags: [mode:any, tier:safe]
+
+  # Aggressive, vendor-specific GPU tweaks. Disputed/unmeasured -- opt-in only.
+  # AMD: EnableUlps=0 (keep the GPU out of its deep idle state). NVIDIA: PowerMizer
+  # forced to maximum performance. Both written only on the class subkey whose
+  # DriverDesc/ProviderName matches the vendor, so a mismatched GPU is never touched.
+  - !powerShell
+    command: |
+      $root = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
+      Get-ChildItem $root -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object {
+        $k = $_.PSPath
+        $id = ((Get-ItemProperty $k -Name DriverDesc -ErrorAction SilentlyContinue).DriverDesc.ToString() + ' ' + (Get-ItemProperty $k -Name ProviderName -ErrorAction SilentlyContinue).ProviderName.ToString())
+        if ($id -match 'Radeon|Advanced Micro|\bAMD\b') {
+          Set-ItemProperty $k -Name EnableUlps -Type DWord -Value 0 -ErrorAction SilentlyContinue
+        }
+        if ($id -match 'NVIDIA') {
+          Set-ItemProperty $k -Name PowerMizerEnable  -Type DWord -Value 1 -ErrorAction SilentlyContinue
+          Set-ItemProperty $k -Name PowerMizerLevel   -Type DWord -Value 1 -ErrorAction SilentlyContinue
+          Set-ItemProperty $k -Name PowerMizerLevelAC -Type DWord -Value 1 -ErrorAction SilentlyContinue
+          Set-ItemProperty $k -Name PerfLevelSrc      -Type DWord -Value 8738 -ErrorAction SilentlyContinue
+        }
+      }
+      exit 0
+    option: gpu-tweaks-aggressive
+    _tags: [mode:any, tier:aggressive]

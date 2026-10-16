@@ -7,7 +7,7 @@ and keeps everything Easy Anti-Cheat and Fortnite tournaments require.</p>
 
 <p align="center"><img src="docs/wallpaper-preview.jpg" width="720" alt="MuulfzOS wallpaper"></p>
 
-> **Status: 0.9.3.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
+> **Status: 0.9.4.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
 > the anti-cheat invariants pass. It has not been verified on bare metal with Fortnite yet,
 > because Easy Anti-Cheat refuses to run in a VM. Reports from real PCs are welcome.
 
@@ -31,7 +31,7 @@ and keeps everything Easy Anti-Cheat and Fortnite tournaments require.</p>
 | **Debloat** | **AI:** Copilot, Recall, Click to Do, AI Hub, Writing Assistant, Edge Game Assist, and the AI in Paint, Notepad, Edge and Settings. **Bing, news and Widgets:** Bing Search/News/Weather and Widgets. **Office and productivity:** Outlook, Teams, To Do, Power Automate, Office Hub, Clipchamp. **Other apps:** Dev Home, Family, Quick Assist, Phone Link, Feedback Hub, Solitaire, Tips, Get Help, Sticky Notes, Alarms, Camera app, Sound Recorder. **OneDrive** is removed. **Kept:** Microsoft Store, Xbox app, Game Bar, Edge (WebView2). |
 | **Optional** (off by default) | **Group services into fewer processes:** audio, network and Xbox stay separate. **Memory compression off:** 16 GB+ only. **Fault Tolerant Heap off.** **Disable Spectre/Meltdown mitigations:** advanced, lowers security (0-3% on modern CPUs, more on old ones). |
 | **Defender** (choose on its page) | **Keep and tune (default):** Defender stays on, scheduled scans run at low CPU priority and never mid-match. **Disable** or **Remove** are advanced choices that need Tamper Protection turned off first; they lower security but do not break Fortnite's anti-cheat (tournaments need Secure Boot/TPM/IOMMU, not Defender). |
-| **Extras** (options) | **Epic Games Launcher**, official installer. **Visual C++ runtimes**, official. **MuulfzOS wallpaper and lock screen.** **Setup notes on the desktop:** tournament readiness, a RAM/EXPO warning, third-party network filters found, and in-game settings. |
+| **Extras** (options) | **Epic Games Launcher** (+ an "Install Fortnite" desktop shortcut). **Google Chrome**, official MSI. **GPU vendor app** (NVIDIA App via Store; AMD/Intel download link) + NVIDIA telemetry off. **Visual C++ runtimes**, official. **MuulfzOS wallpaper and lock screen.** **Setup notes on the desktop:** tournament readiness, a RAM/EXPO warning, third-party network filters found, and in-game settings. |
 
 ## What it keeps (anti-cheat and tournaments)
 
@@ -108,10 +108,13 @@ These figures don't capture what counts most in a match: real FPS, 1% lows and n
 | | Disable Spectre/Meltdown mitigations (advanced, lowers security) | ☐ |
 | Advanced (situational) | Pin Fortnite to the V-Cache CCD (dual-CCD X3D only; no effect elsewhere) | ☐ |
 | | Clear standby memory when free RAM runs low (no third-party tool/driver; helps 8-16 GB or long sessions, a no-op when RAM is plentiful) | ☐ |
+| Graphics (GPU) | Install the GPU vendor app + turn off NVIDIA telemetry (NVIDIA via Store; AMD/Intel get a download link on the desktop notes) | ☐ |
+| | Aggressive GPU tweaks: ULPS off (AMD) / force max performance (NVIDIA) — disputed, unmeasured | ☐ |
 | Defender | Keep Defender on, tune scans for gaming | ✅ (default) |
 | | Disable Defender (needs Tamper Protection off first) | ☐ |
 | | Remove Defender as far as a live apply can (needs Tamper Protection off) | ☐ |
-| Software and look | Install Epic Games Launcher | ✅ |
+| Software and look | Install Epic Games Launcher (+ an "Install Fortnite" desktop shortcut for after you sign in) | ✅ |
+| | Install Google Chrome (official MSI; Edge stays) | ☐ |
 | | Install Visual C++ runtimes (official) | ☐ |
 | | MuulfzOS wallpaper and lock screen | ✅ |
 

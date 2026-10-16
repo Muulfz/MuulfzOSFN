@@ -25,6 +25,7 @@ actions:
   - !include "registry/x3d-affinity.yml"
   - !include "registry/defender-mode.yml"
   - !include "registry/standby-clean.yml"
+  - !include "registry/gpu-vendor.yml"
   - !include "registry/onedrive-removal.yml"
   - !include "services/disable.yml"
   - !include "appx/trim.yml"

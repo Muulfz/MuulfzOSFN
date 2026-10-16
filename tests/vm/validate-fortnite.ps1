@@ -11,7 +11,8 @@
 param([bool] $VbsOff = $true, [bool] $HighPriority = $true, [bool] $X3dBalanced = $false, [bool] $WuNoDrivers = $false, [bool] $InstallEpic = $true,
       [bool] $SvcGroup = $false, [bool] $MemCompOff = $false, [bool] $FthOff = $false, [bool] $Wallpaper = $true,
       [ValidateSet('keep','disable','remove')] [string] $DefenderMode = 'keep', [bool] $SpectreOff = $false, [bool] $InstallRuntimes = $false,
-      [bool] $X3dAffinity = $false, [bool] $StandbyClean = $false)
+      [bool] $X3dAffinity = $false, [bool] $StandbyClean = $false,
+      [bool] $InstallChrome = $false, [bool] $InstallGpu = $false, [bool] $GpuTweaks = $false)
 $ErrorActionPreference = 'Stop'   # a failing cmdlet must read as ERR, never as a vacuous PASS
 
 function Reg($path, $name) { (Get-ItemProperty "Registry::$path" -Name $name -ErrorAction SilentlyContinue).$name }
@@ -51,6 +52,24 @@ foreach ($p in '*Copilot*', '*BingSearch*', '*WebExperience*', '*WritingAssistan
     Check tweak "Appx removed: $p" $false { Present $p }
 }
 Check tweak 'Epic launcher installed'        $InstallEpic { [bool](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object DisplayName -eq 'Epic Games Launcher') }
+if ($InstallEpic) {
+    Check tweak 'Install Fortnite shortcut'  $true { Test-Path "$env:PUBLIC\Desktop\Install Fortnite.url" }
+}
+if ($InstallChrome) {
+    Check tweak 'Google Chrome installed'    $true { [bool](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object DisplayName -eq 'Google Chrome') }
+}
+# GPU install/tweaks are vendor-dependent (and the NVIDIA Store install is best-effort),
+# so report rather than hard-assert -- a VM has no real GPU vendor to check against.
+if ($InstallGpu) {
+    Check info 'NVIDIA telemetry opt-out'    '' { Reg 'HKLM\SOFTWARE\NVIDIA Corporation\Global\FTS' EnableRID66610 }
+}
+if ($GpuTweaks) {
+    Check info 'GPU aggressive tweak values' '' {
+        $root = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
+        (Get-ChildItem $root -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object {
+            $p = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
+            if ($null -ne $p.EnableUlps -or $null -ne $p.PowerMizerEnable) { "$($p.DriverDesc): Ulps=$($p.EnableUlps) PMz=$($p.PowerMizerEnable)" } }) -join ' | ' }
+}
 Check tweak 'Promo app installs off'         0 { Reg 'HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' SilentInstalledAppsEnabled }
 # Look at the real pin list: Windows rewrites the AuxilliaryPins flags at first logon.
 Check tweak 'No Outlook pin on taskbar'      $false { $f = Reg 'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband' Favorites; [bool]($f -and [Text.Encoding]::Unicode.GetString([byte[]]$f) -match 'Outlook') }
