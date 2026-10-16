@@ -6,7 +6,7 @@ exigem**: Secure Boot, TPM, IOMMU e assinatura de drivers ficam intactos. O Defe
 **ligado por omissão** (com os scans afinados para jogar); há uma página opcional avançada
 para o desligar ou remover, que baixa a segurança mas não afeta o anti-cheat do Fortnite.
 
-> **Versão 0.9.2.** Funciona no Windows 11 24H2, 25H2 e 26H2. As predefinições (as opções já
+> **Versão 0.9.3.** Funciona no Windows 11 24H2, 25H2 e 26H2. As predefinições (as opções já
 > marcadas) são as recomendadas e testadas. As opções marcadas como **Avançado** são extra e
 > para quem sabe o que está a fazer — não precisas delas para jogar bem. Problemas? [Abre uma
 > issue](https://github.com/Muulfz/MuulfzOSFN/issues).
@@ -15,7 +15,7 @@ para o desligar ou remover, que baixa a segurança mas não afeta o anti-cheat d
 
 - PC com **Windows 11 24H2, 25H2 ou 26H2** (64 bits)
 - **Ligação à Internet**, para o Windows Update e o Epic Games Launcher
-- O ficheiro **`MuulfzOSFN-0.9.2.apbx`**, a transferir em [Releases](https://github.com/Muulfz/MuulfzOSFN/releases)
+- O ficheiro **`MuulfzOSFN-0.9.3.apbx`**, a transferir em [Releases](https://github.com/Muulfz/MuulfzOSFN/releases)
 - O **AME Wizard**, a transferir em [ameliorated.io](https://ameliorated.io)
 - Para uma instalação de raiz: uma **pen USB de 16 GB ou mais** (vai ser apagada) e o [Rufus](https://rufus.ie)
 
@@ -30,7 +30,7 @@ Há duas formas de instalar — escolhe uma:
 
 1. Instala todas as atualizações no **Windows Update** e reinicia. O AME recusa avançar se houver atualizações pendentes.
 2. Abre o **AME Wizard**.
-3. Arrasta o `MuulfzOSFN-0.9.2.apbx` para a janela, ou clica em **Use Existing** e escolhe o ficheiro.
+3. Arrasta o `MuulfzOSFN-0.9.3.apbx` para a janela, ou clica em **Use Existing** e escolhe o ficheiro.
 4. Segue as páginas e escolhe as opções (vê a secção [Opções do assistente](#opções-do-assistente)).
 5. O AME cria um **ponto de restauro**, aplica tudo (cerca de 10 minutos) e reinicia sozinho.
 
@@ -65,7 +65,7 @@ Podes aplicar no Windows que já usas: **os teus ficheiros e os programas que in
    - ✅ *Disable BitLocker automatic device encryption*
    - ⬜ *Create a local account with username*: **deixa desmarcado**, para criares a tua conta durante a instalação.
    - ⬜ *Remove requirement for 4GB+ RAM, Secure Boot and TPM 2.0*: **deixa desmarcado**, porque os torneios exigem estas três coisas.
-4. Quando o Rufus terminar, copia para a pen USB o **AME Wizard** e o **`MuulfzOSFN-0.9.2.apbx`**.
+4. Quando o Rufus terminar, copia para a pen USB o **AME Wizard** e o **`MuulfzOSFN-0.9.3.apbx`**.
 
 ### 2. Configurar a BIOS
 
@@ -86,7 +86,7 @@ Depois, arranca a partir da pen USB em modo **UEFI**.
 ### 4. Aplicar o MuulfzOS
 
 1. Na pen USB, abre o **AME Wizard**.
-2. Clica em **Use Existing** e escolhe o `MuulfzOSFN-0.9.2.apbx`.
+2. Clica em **Use Existing** e escolhe o `MuulfzOSFN-0.9.3.apbx`.
 3. Segue as páginas, escolhe as opções e confirma. O PC reinicia sozinho no fim.
 
 ---
@@ -108,7 +108,8 @@ precisas delas para jogar bem.
 | | Desligar a compressão de memória (16 GB+) | ⬜ | Opcional. Só atua com 16 GB ou mais de RAM. |
 | | Desligar o Fault Tolerant Heap | ⬜ | Opcional. |
 | | Desligar as mitigações Spectre/Meltdown | ⬜ | **Avançado.** 0 a 3% em CPUs recentes, mais em antigos. Tira uma camada de segurança do kernel. Não afeta o anti-cheat. |
-| Ryzen X3D | Fixar o Fortnite ao CCD com cache 3D | ⬜ | **Marca só se tens um 7900/7950/9900/9950X3D (2 CCDs).** Uma tarefa fixa o jogo aos núcleos com V-Cache. Sem efeito noutros CPUs. |
+| Avançado | Fixar o Fortnite ao CCD com cache 3D | ⬜ | **Marca só se tens um 7900/7950/9900/9950X3D (2 CCDs).** Uma tarefa fixa o jogo aos núcleos com V-Cache. Sem efeito noutros CPUs. |
+| | Limpar a memória *standby* quando a RAM livre fica baixa | ⬜ | **Avançado.** Replica o EmptyStandbyList/ISLC sem programa nem driver de terceiros: uma tarefa purga a *standby list* só sob pressão de RAM. Ajuda em 8-16 GB ou sessões longas; em 32 GB quase nunca atua. |
 | Defender | Manter o Defender e afinar os scans | ✅ | Recomendado. O Defender continua ligado; os scans agendados correm em baixa prioridade e nunca a meio da partida. |
 | | Desligar o Defender | ⬜ | **Avançado.** Tens de desligar o Tamper Protection primeiro (ver abaixo). Baixa a segurança; não afeta os torneios. |
 | | Remover o Defender ao máximo possível | ⬜ | **Avançado.** Igual, com Tamper Protection desligado. Remoção total mesmo só na ISO. |

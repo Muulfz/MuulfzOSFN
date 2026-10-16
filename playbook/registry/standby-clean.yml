@@ -1,0 +1,78 @@
+title: Standby-list memory cleaner -- purge standby pages under low RAM (opt-in)
+# The auditable equivalent of EmptyStandbyList.exe / ISLC, with NO third-party
+# binary, NO kernel driver (ISLC bundles WinRing0), NO resident process and NO
+# phone-home (ISLC calls wagnardsoft.com for a version check). A periodic task --
+# the same pattern as x3d-affinity.yml -- runs once a minute and, ONLY when
+# available physical RAM drops to/below the threshold, enables
+# SeProfileSingleProcessPrivilege and calls
+#   NtSetSystemInformation(SystemMemoryListInformation=0x50, MemoryPurgeStandbyList=4)
+# to free the standby list to the free list. Static RE of the iGust bundle
+# confirmed this is the exact primitive both EmptyStandbyList and ISLC use.
+#
+# Honest note: on 32 GB this almost never triggers (available stays high) -- that
+# is on purpose; purging standby when there is no memory pressure only throws away
+# cache. It helps the 8-16 GB / long-session case, which is why it is opt-in and
+# off by default.
+#
+# Quoting: tools/build.py rewrites every " in a powerShell command to """, which
+# breaks C# written to a dropped file. So this command contains ZERO double quotes
+# -- the C# uses the sentinel ~Q~ and we swap it for a real " ([char]34) at the
+# moment the script is written to disk. build.py then leaves the command untouched.
+actions:
+  - !status
+    status: 'Installing the standby-list memory cleaner...'
+  - !powerShell
+    command: |
+      $dir = Join-Path $env:ProgramData 'MuulfzOTMZ'
+      New-Item -ItemType Directory -Force $dir | Out-Null
+      $file = Join-Path $dir 'standby-clean.ps1'
+      $script = @'
+      $ErrorActionPreference = 'SilentlyContinue'
+      $thresholdMB = 2048
+      $log = Join-Path $env:ProgramData 'MuulfzOTMZ\standby-clean.log'
+      Add-Type -TypeDefinition @~Q~
+      using System;
+      using System.Runtime.InteropServices;
+      public static class MuulfzMem {
+        [StructLayout(LayoutKind.Sequential)] public struct MEMSTATUS {
+          public uint dwLength; public uint dwMemoryLoad; public ulong ullTotalPhys;
+          public ulong ullAvailPhys; public ulong ullTotalPageFile; public ulong ullAvailPageFile;
+          public ulong ullTotalVirtual; public ulong ullAvailVirtual; public ulong ullAvailExtendedVirtual; }
+        [StructLayout(LayoutKind.Sequential, Pack=1)] struct TOKPRIV { public uint Count; public ulong Luid; public uint Attr; }
+        [DllImport(~Q~kernel32.dll~Q~)] [return: MarshalAs(UnmanagedType.Bool)] static extern bool GlobalMemoryStatusEx(ref MEMSTATUS m);
+        [DllImport(~Q~kernel32.dll~Q~)] static extern IntPtr GetCurrentProcess();
+        [DllImport(~Q~advapi32.dll~Q~, SetLastError=true)] static extern bool OpenProcessToken(IntPtr h, uint a, out IntPtr t);
+        [DllImport(~Q~advapi32.dll~Q~, SetLastError=true)] static extern bool LookupPrivilegeValue(string s, string n, out ulong l);
+        [DllImport(~Q~advapi32.dll~Q~, SetLastError=true)] static extern bool AdjustTokenPrivileges(IntPtr t, bool d, ref TOKPRIV p, uint b, IntPtr pr, IntPtr rl);
+        [DllImport(~Q~ntdll.dll~Q~)] static extern int NtSetSystemInformation(int c, ref int i, int l);
+        public static long AvailMB() {
+          MEMSTATUS m = new MEMSTATUS(); m.dwLength = (uint)Marshal.SizeOf(m);
+          GlobalMemoryStatusEx(ref m); return (long)(m.ullAvailPhys / (1024UL*1024UL));
+        }
+        public static int PurgeStandby() {
+          IntPtr tok; if (!OpenProcessToken(GetCurrentProcess(), 0x20, out tok)) return -1;
+          ulong luid; if (!LookupPrivilegeValue(null, ~Q~SeProfileSingleProcessPrivilege~Q~, out luid)) return -2;
+          TOKPRIV tp; tp.Count = 1; tp.Luid = luid; tp.Attr = 0x2;
+          AdjustTokenPrivileges(tok, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
+          int cmd = 4;
+          return NtSetSystemInformation(0x50, ref cmd, 4);
+        }
+      }
+      ~Q~@
+      $avail = [MuulfzMem]::AvailMB()
+      if ($avail -gt $thresholdMB) { return }
+      $rc = [MuulfzMem]::PurgeStandby()
+      Add-Content -LiteralPath $log -Value (~Q~{0}  avail={1}MB <= {2}MB, purged standby rc={3}~Q~ -f (Get-Date -Format s), $avail, $thresholdMB, $rc)
+      '@
+      $script = $script.Replace('~Q~', [char]34)
+      Set-Content -LiteralPath $file -Value $script -Encoding UTF8
+      & $file
+      $act = New-ScheduledTaskAction -Execute powershell.exe -Argument ('-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ' + $file)
+      $trg = New-ScheduledTaskTrigger -AtLogOn
+      $rep = (New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration ([TimeSpan]::MaxValue)).Repetition
+      $trg.Repetition = $rep
+      $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
+      Register-ScheduledTask -TaskPath '\MuulfzOTMZ\' -TaskName 'Fortnite standby clean' -Action $act -Trigger $trg -Settings $set -User SYSTEM -RunLevel Highest -Force | Out-Null
+      exit 0
+    option: standby-clean
+    _tags: [mode:any, tier:aggressive]

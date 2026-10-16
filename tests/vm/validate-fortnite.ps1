@@ -11,7 +11,7 @@
 param([bool] $VbsOff = $true, [bool] $HighPriority = $true, [bool] $X3dBalanced = $false, [bool] $WuNoDrivers = $false, [bool] $InstallEpic = $true,
       [bool] $SvcGroup = $false, [bool] $MemCompOff = $false, [bool] $FthOff = $false, [bool] $Wallpaper = $true,
       [ValidateSet('keep','disable','remove')] [string] $DefenderMode = 'keep', [bool] $SpectreOff = $false, [bool] $InstallRuntimes = $false,
-      [bool] $X3dAffinity = $false)
+      [bool] $X3dAffinity = $false, [bool] $StandbyClean = $false)
 $ErrorActionPreference = 'Stop'   # a failing cmdlet must read as ERR, never as a vacuous PASS
 
 function Reg($path, $name) { (Get-ItemProperty "Registry::$path" -Name $name -ErrorAction SilentlyContinue).$name }
@@ -126,6 +126,11 @@ if ($X3dAffinity) {
     Check tweak 'X3D affinity helper installed' $true {
         [bool](Get-ScheduledTask -TaskPath '\MuulfzOTMZ\' -TaskName 'Fortnite X3D affinity' -ErrorAction SilentlyContinue) -and
         (Test-Path "$env:ProgramData\MuulfzOTMZ\x3d-affinity.ps1") }
+}
+if ($StandbyClean) {
+    Check tweak 'Standby cleaner installed'    $true {
+        [bool](Get-ScheduledTask -TaskPath '\MuulfzOTMZ\' -TaskName 'Fortnite standby clean' -ErrorAction SilentlyContinue) -and
+        (Test-Path "$env:ProgramData\MuulfzOTMZ\standby-clean.ps1") }
 }
 $wp = 'C:\Windows\Web\Wallpaper\MuulfzOS\wallpaper.jpg'
 Check tweak 'MuulfzOS wallpaper'             $Wallpaper { (Test-Path $wp) -and (Reg 'HKCU\Control Panel\Desktop' Wallpaper) -eq $wp }

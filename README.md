@@ -7,7 +7,7 @@ and keeps everything Easy Anti-Cheat and Fortnite tournaments require.</p>
 
 <p align="center"><img src="docs/wallpaper-preview.jpg" width="720" alt="MuulfzOS wallpaper"></p>
 
-> **Status: 0.9.2.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
+> **Status: 0.9.3.** Every change has been checked in Hyper-V VMs on 25H2 and 26H2, and
 > the anti-cheat invariants pass. It has not been verified on bare metal with Fortnite yet,
 > because Easy Anti-Cheat refuses to run in a VM. Reports from real PCs are welcome.
 
@@ -106,7 +106,8 @@ These figures don't capture what counts most in a match: real FPS, 1% lows and n
 | | Memory compression off (16 GB+ RAM) | ☐ |
 | | Fault Tolerant Heap off | ☐ |
 | | Disable Spectre/Meltdown mitigations (advanced, lowers security) | ☐ |
-| Ryzen X3D | Pin Fortnite to the V-Cache CCD (dual-CCD X3D only; no effect elsewhere) | ☐ |
+| Advanced (situational) | Pin Fortnite to the V-Cache CCD (dual-CCD X3D only; no effect elsewhere) | ☐ |
+| | Clear standby memory when free RAM runs low (no third-party tool/driver; helps 8-16 GB or long sessions, a no-op when RAM is plentiful) | ☐ |
 | Defender | Keep Defender on, tune scans for gaming | ✅ (default) |
 | | Disable Defender (needs Tamper Protection off first) | ☐ |
 | | Remove Defender as far as a live apply can (needs Tamper Protection off) | ☐ |
